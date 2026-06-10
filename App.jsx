@@ -393,6 +393,9 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.yellow, marginRight: 8 }}>
                   {days === 0 ? "Today" : `${days}d`}
                 </div>
+                {s.groupCode && (
+                  <div style={{ fontSize: 11, color: COLORS.textSecondary, marginRight: 4 }}>Code: <span style={{ fontWeight: 700, color: COLORS.textPrimary }}>{s.groupCode}</span></div>
+                )}
                 <a href={s.bookingUrl} target="_blank" rel="noreferrer" style={{
                   background: platformColor, color: "#fff", borderRadius: 6,
                   padding: "5px 10px", fontSize: 11, fontWeight: 600, textDecoration: "none", flexShrink: 0,
@@ -660,6 +663,9 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
                     <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.yellow, marginRight: 4 }}>
                       {days === 0 ? "Today" : `${days}d`}
                     </div>
+                  )}
+                  {s.groupCode && (
+                    <div style={{ fontSize: 11, color: COLORS.textSecondary, marginRight: 4 }}>Code: <span style={{ fontWeight: 700, color: COLORS.textPrimary }}>{s.groupCode}</span></div>
                   )}
                   <a href={s.bookingUrl} target="_blank" rel="noreferrer" style={{
                     background: platformColor, color: "#fff", borderRadius: 6,

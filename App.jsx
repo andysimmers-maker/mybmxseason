@@ -163,6 +163,9 @@ function CoachingView({ rounds }) {
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
                       </div>
                     )}
+                    {s.groupCode && (
+                      <div style={{ fontSize: 11, color: COLORS.textSecondary }}>Code: <span style={{ fontWeight: 700, color: COLORS.textPrimary }}>{s.groupCode}</span></div>
+                    )}
                     <a href={s.bookingUrl} target="_blank" rel="noreferrer" style={{
                       background: platformColor, color: "#fff", borderRadius: 8,
                       padding: "7px 14px", fontSize: 12, fontWeight: 600, textDecoration: "none",

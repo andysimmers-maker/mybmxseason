@@ -1,0 +1,28 @@
+{
+  "1,2": [
+    { "id": "m1", "name": "Travelodge Manchester Sportcity", "type": "Hotel", "distance": "0.3 miles", "url": "https://www.travelodge.co.uk", "communityRating": 4, "communityNotes": "Closest to venue. Book early." },
+    { "id": "m2", "name": "Premier Inn Manchester City Centre", "type": "Hotel", "distance": "1.5 miles", "url": "https://www.premierinn.com", "communityRating": 4, "communityNotes": "Good value. Easy tram into venue." },
+    { "id": "m3", "name": "Ibis Manchester Centre", "type": "Hotel", "distance": "2 miles", "url": "https://www.ibis.com", "communityRating": 3, "communityNotes": "Budget option. Fine for one night." }
+  ],
+  "3,4": [
+    { "id": "g1", "name": "Travelodge Glasgow Braehead", "type": "Hotel", "distance": "2 miles", "url": "https://www.travelodge.co.uk", "communityRating": 4, "communityNotes": "Popular with BMX families. Book well in advance." },
+    { "id": "g2", "name": "Premier Inn Glasgow Braehead", "type": "Hotel", "distance": "2.5 miles", "url": "https://www.premierinn.com", "communityRating": 4, "communityNotes": "Reliable. Good breakfast." },
+    { "id": "g3", "name": "Travelodge Glasgow Govan", "type": "Hotel", "distance": "1.5 miles", "url": "https://www.travelodge.co.uk", "communityRating": 3, "communityNotes": "Budget option close to track." }
+  ],
+  "5,6": [
+    { "id": "gos1", "name": "HMS Sultan Polo Fields Camping", "type": "Camping", "distance": "On site", "url": "https://www.gosportbmx.co.uk", "communityRating": 5, "communityNotes": "Best option. Toilets and showers on site. £70 weekend." },
+    { "id": "gos2", "name": "Premier Inn Fareham", "type": "Hotel", "distance": "4 miles", "url": "https://www.premierinn.com", "communityRating": 4, "communityNotes": "Most families stay here. 10 min drive." },
+    { "id": "gos3", "name": "Travelodge Fareham", "type": "Hotel", "distance": "4 miles", "url": "https://www.travelodge.co.uk", "communityRating": 3, "communityNotes": "Budget fallback if Premier Inn full." }
+  ],
+  "7,8": [
+    { "id": "car1", "name": "Campsite — Adjacent to Track", "type": "Camping", "distance": "On site", "url": "https://www.cardiffbmx.co.uk", "communityRating": 5, "communityNotes": "Motorhomes/caravans only. £120 for 3 days. Book via Cardiff BMX app." },
+    { "id": "car2", "name": "Premier Inn Cardiff North", "type": "Hotel", "distance": "10 mins", "url": "https://www.premierinn.com", "communityRating": 4, "communityNotes": "Solid choice. Easy drive to track." },
+    { "id": "car3", "name": "Travelodge Cardiff Llanederyn", "type": "Hotel", "distance": "10 mins", "url": "https://www.travelodge.co.uk", "communityRating": 4, "communityNotes": "Closest budget hotel to the track." },
+    { "id": "car4", "name": "Premier Inn Cardiff City Centre", "type": "Hotel", "distance": "15 mins", "url": "https://www.premierinn.com", "communityRating": 3, "communityNotes": "Good if you want city centre. Slightly longer drive." }
+  ],
+  "9,10": [
+    { "id": "der1", "name": "Premier Inn Derby City Centre", "type": "Hotel", "distance": "1 mile", "url": "https://www.premierinn.com", "communityRating": 4, "communityNotes": "Most popular with race families. Walk or short drive." },
+    { "id": "der2", "name": "Travelodge Derby Central", "type": "Hotel", "distance": "1 mile", "url": "https://www.travelodge.co.uk", "communityRating": 3, "communityNotes": "Budget option. Does the job." },
+    { "id": "der3", "name": "Holiday Inn Derby Nottingham", "type": "Hotel", "distance": "2 miles", "url": "https://www.holidayinn.com", "communityRating": 4, "communityNotes": "More space — good for families needing a family room." }
+  ]
+}

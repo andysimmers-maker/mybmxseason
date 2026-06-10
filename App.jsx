@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import SEASON_DATA from "../data/seasons.json";
-import COACHING_DATA from "../data/coaching.json";
-import ACCOMMODATION_DATA from "../data/accommodation.json";
+import SEASON_DATA from "./seasons.json";
+import COACHING_DATA from "./coaching.json";
+import ACCOMMODATION_DATA from "./accommodation.json";
 
 const COLORS = {
   bg: "#0d0d0d",

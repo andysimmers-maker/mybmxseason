@@ -187,12 +187,14 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
   const nextRound = upcoming[0];
 
   const allDeadlines = [];
+  const seenWeekends = new Set();
   rounds.forEach(r => {
-    if (new Date(r.date) >= now) {
-      if (daysUntil(r.entryClose) >= 0) allDeadlines.push({ label: `Round ${r.round} entries close — ${r.city}`, date: r.entryClose, round: r.id });
-      if (daysUntil(r.parkingOpen) >= 0) allDeadlines.push({ label: `Round ${r.round} parking opens — ${r.city}`, date: r.parkingOpen, round: r.id });
-      if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) allDeadlines.push({ label: `Round ${r.round} camping opens — ${r.city}`, date: r.campingOpen, round: r.id });
-      if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) allDeadlines.push({ label: `Round ${r.round} gazebo booking opens — ${r.city}`, date: r.gazeboBookingOpen, round: r.id });
+    if (new Date(r.date) >= now && !seenWeekends.has(r.practiceDate)) {
+      seenWeekends.add(r.practiceDate);
+      if (daysUntil(r.entryClose) >= 0) allDeadlines.push({ label: `${r.city} entries close`, date: r.entryClose, round: r.id });
+      if (daysUntil(r.parkingOpen) >= 0) allDeadlines.push({ label: `${r.city} parking opens`, date: r.parkingOpen, round: r.id });
+      if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) allDeadlines.push({ label: `${r.city} camping opens`, date: r.campingOpen, round: r.id });
+      if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) allDeadlines.push({ label: `${r.city} gazebo booking opens`, date: r.gazeboBookingOpen, round: r.id });
     }
   });
   allDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -205,11 +207,14 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
 
   const myRoundsList = rounds.filter(r => myRounds.has(r.id) && new Date(r.date) >= now);
   const myDeadlines = [];
+  const seenMyWeekends = new Set();
   myRoundsList.forEach(r => {
-    if (daysUntil(r.entryClose) >= 0) myDeadlines.push({ label: `R${r.round} entries close`, date: r.entryClose, city: r.city, roundId: r.id });
-    if (daysUntil(r.parkingOpen) >= 0) myDeadlines.push({ label: `R${r.round} parking opens`, date: r.parkingOpen, city: r.city, roundId: r.id });
-    if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) myDeadlines.push({ label: `R${r.round} camping opens`, date: r.campingOpen, city: r.city, roundId: r.id });
-    if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) myDeadlines.push({ label: `R${r.round} gazebo opens`, date: r.gazeboBookingOpen, city: r.city, roundId: r.id });
+    if (seenMyWeekends.has(r.practiceDate)) return;
+    seenMyWeekends.add(r.practiceDate);
+    if (daysUntil(r.entryClose) >= 0) myDeadlines.push({ label: `${r.city} entries close`, date: r.entryClose, city: r.city, roundId: r.id });
+    if (daysUntil(r.parkingOpen) >= 0) myDeadlines.push({ label: `${r.city} parking opens`, date: r.parkingOpen, city: r.city, roundId: r.id });
+    if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) myDeadlines.push({ label: `${r.city} camping opens`, date: r.campingOpen, city: r.city, roundId: r.id });
+    if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) myDeadlines.push({ label: `${r.city} gazebo opens`, date: r.gazeboBookingOpen, city: r.city, roundId: r.id });
   });
   myDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
 

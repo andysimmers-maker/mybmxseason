@@ -1,6 +1,6 @@
 [
   {
-    "id": 1, "round": 1,
+    "id": 1, "round": 1, "weekend": "manchester-2026",
     "venue": "National Cycling Centre (Indoor)", "city": "Manchester",
     "date": "2026-04-11", "practiceDate": "2026-04-10",
     "entryOpen": "2026-02-01", "entryClose": "2026-04-06",
@@ -14,7 +14,7 @@
     "status": "complete"
   },
   {
-    "id": 2, "round": 2,
+    "id": 2, "round": 2, "weekend": "manchester-2026",
     "venue": "National Cycling Centre (Indoor)", "city": "Manchester",
     "date": "2026-04-12", "practiceDate": "2026-04-10",
     "entryOpen": "2026-02-01", "entryClose": "2026-04-06",
@@ -28,7 +28,7 @@
     "status": "complete"
   },
   {
-    "id": 3, "round": 3,
+    "id": 3, "round": 3, "weekend": "glasgow-2026",
     "venue": "Glasgow BMX Centre (Movement Park)", "city": "Glasgow",
     "date": "2026-05-02", "practiceDate": "2026-05-01",
     "entryOpen": "2026-03-01", "entryClose": "2026-04-27",
@@ -42,7 +42,7 @@
     "status": "upcoming"
   },
   {
-    "id": 4, "round": 4,
+    "id": 4, "round": 4, "weekend": "glasgow-2026",
     "venue": "Glasgow BMX Centre (Movement Park)", "city": "Glasgow",
     "date": "2026-05-03", "practiceDate": "2026-05-01",
     "entryOpen": "2026-03-01", "entryClose": "2026-04-27",
@@ -56,7 +56,7 @@
     "status": "upcoming"
   },
   {
-    "id": 5, "round": 5,
+    "id": 5, "round": 5, "weekend": "gosport-2026",
     "venue": "Gosport BMX Club", "city": "Gosport",
     "date": "2026-06-13", "practiceDate": "2026-06-12",
     "entryOpen": "2026-04-01", "entryClose": "2026-06-08",
@@ -72,7 +72,7 @@
     "status": "upcoming"
   },
   {
-    "id": 6, "round": 6,
+    "id": 6, "round": 6, "weekend": "gosport-2026",
     "venue": "Gosport BMX Club", "city": "Gosport",
     "date": "2026-06-14", "practiceDate": "2026-06-12",
     "entryOpen": "2026-04-01", "entryClose": "2026-06-08",
@@ -88,7 +88,7 @@
     "status": "upcoming"
   },
   {
-    "id": 7, "round": 7,
+    "id": 7, "round": 7, "weekend": "cardiff-2026",
     "venue": "Cardiff BMX Racing Club (National BMX Centre Wales)", "city": "Cardiff",
     "date": "2026-07-04", "practiceDate": "2026-07-03",
     "entryOpen": "2026-05-01", "entryClose": "2026-06-29",
@@ -105,7 +105,7 @@
     "isNatChamps": true
   },
   {
-    "id": 8, "round": 8,
+    "id": 8, "round": 8, "weekend": "cardiff-2026",
     "venue": "Cardiff BMX Racing Club (National BMX Centre Wales)", "city": "Cardiff",
     "date": "2026-07-05", "practiceDate": "2026-07-03",
     "entryOpen": "2026-05-01", "entryClose": "2026-06-29",
@@ -122,7 +122,7 @@
     "isNatChamps": true
   },
   {
-    "id": 9, "round": 9,
+    "id": 9, "round": 9, "weekend": "derby-2026",
     "venue": "Derby Arena", "city": "Derby",
     "date": "2026-08-01", "practiceDate": "2026-07-31",
     "entryOpen": "2026-05-15", "entryClose": "2026-07-27",
@@ -138,7 +138,7 @@
     "status": "upcoming"
   },
   {
-    "id": 10, "round": 10,
+    "id": 10, "round": 10, "weekend": "derby-2026",
     "venue": "Derby Arena", "city": "Derby",
     "date": "2026-08-02", "practiceDate": "2026-07-31",
     "entryOpen": "2026-05-15", "entryClose": "2026-07-27",

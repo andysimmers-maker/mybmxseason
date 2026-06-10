@@ -19,6 +19,22 @@ const COLORS = {
 
 const PLATFORM_COLORS = { "Spond": "#00b894", "Website": COLORS.blue };
 
+const WEEKENDS = (() => {
+  const map = new Map();
+  SEASON_DATA.forEach(r => {
+    if (!map.has(r.weekend)) map.set(r.weekend, []);
+    map.get(r.weekend).push(r);
+  });
+  return Array.from(map.values()).map(rounds => ({
+    ...rounds[0],
+    weekendId: rounds[0].weekend,
+    rounds,
+    roundNumbers: rounds.map(r => r.round),
+    dates: rounds.map(r => r.date),
+    isNatChamps: rounds.some(r => r.isNatChamps),
+  }));
+})();
+
 const DEFAULT_CHECKLIST = [
   { id: "bike", label: "Bike checked and race-ready", category: "bike" },
   { id: "helmet", label: "Helmet (approved, no cracks)", category: "safety" },
@@ -62,8 +78,7 @@ function daysUntil(dateStr) {
   now.setHours(0, 0, 0, 0);
   const [year, month, day] = dateStr.split("-").map(Number);
   const target = new Date(year, month - 1, day);
-  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  return diff;
+  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
 }
 
 function DeadlinePill({ label, date }) {
@@ -81,31 +96,26 @@ function DeadlinePill({ label, date }) {
         <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: 600 }}>{label}</div>
         <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{formatDate(date)}</div>
       </div>
-      <div style={{
-        fontSize: 13, fontWeight: 700, color: color,
-        background: `${color}22`, padding: "3px 10px", borderRadius: 20,
-      }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color, background: `${color}22`, padding: "3px 10px", borderRadius: 20 }}>
         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
       </div>
     </div>
   );
 }
 
-function CoachingView({ rounds }) {
+function CoachingView() {
   const [filterCoach, setFilterCoach] = useState("All");
   const now = new Date();
   const allCoaches = ["All", ...Array.from(new Set(COACHING_DATA.map(s => s.coach)))];
   const filtered = COACHING_DATA.filter(s => filterCoach === "All" || s.coach === filterCoach);
 
   const seen = new Set();
-  const weekends = [];
-  rounds.forEach(r => {
-    const sessions = filtered.filter(s => s.roundIds.includes(r.id));
-    if (sessions.length === 0) return;
-    const weekendKey = sessions[0].roundIds.join("-");
-    if (seen.has(weekendKey)) return;
-    seen.add(weekendKey);
-    weekends.push({ round: r, sessions });
+  const weekendGroups = [];
+  WEEKENDS.forEach(w => {
+    const sessions = filtered.filter(s => w.rounds.some(r => s.roundIds.includes(r.id)));
+    if (sessions.length === 0 || seen.has(w.weekendId)) return;
+    seen.add(w.weekendId);
+    weekendGroups.push({ weekend: w, sessions });
   });
 
   return (
@@ -124,16 +134,22 @@ function CoachingView({ rounds }) {
         </div>
       </div>
 
-      {weekends.length === 0 && (
+      {weekendGroups.length === 0 && (
         <div style={{ color: COLORS.textMuted, fontSize: 13, padding: 24, textAlign: "center" }}>No sessions found.</div>
       )}
 
-      {weekends.map(({ round: r, sessions }) => (
-        <div key={r.id} style={{ marginBottom: 28 }}>
+      {weekendGroups.map(({ weekend: w, sessions }) => (
+        <div key={w.weekendId} style={{ marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 24, height: 24, borderRadius: "50%", background: COLORS.red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{r.round}</div>
-            <div style={{ fontSize: 16, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 0.5, color: COLORS.textPrimary }}>{r.city} — {r.venue.split("(")[0].trim()}</div>
-            <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{formatDate(r.date)}</div>
+            <div style={{
+              height: 24, borderRadius: 12, background: COLORS.red,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, padding: "0 8px",
+            }}>R{w.roundNumbers.join("&")}</div>
+            <div style={{ fontSize: 16, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 0.5, color: COLORS.textPrimary }}>
+              {w.city} — {w.venue.split("(")[0].trim()}
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{w.dates.map(formatDate).join(" · ")}</div>
           </div>
           {sessions.map(s => {
             const past = new Date(`${s.date}T${s.time}`) < now;
@@ -181,20 +197,18 @@ function CoachingView({ rounds }) {
   );
 }
 
-function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
+function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
   const now = new Date();
-  const upcoming = rounds.filter(r => new Date(r.date) >= now);
-  const nextRound = upcoming[0];
+  const upcomingWeekends = WEEKENDS.filter(w => new Date(w.dates[w.dates.length - 1]) >= now);
+  const nextWeekend = upcomingWeekends[0];
 
   const allDeadlines = [];
-  const seenWeekends = new Set();
-  rounds.forEach(r => {
-    if (new Date(r.date) >= now && !seenWeekends.has(r.practiceDate)) {
-      seenWeekends.add(r.practiceDate);
-      if (daysUntil(r.entryClose) >= 0) allDeadlines.push({ label: `${r.city} entries close`, date: r.entryClose, round: r.id });
-      if (daysUntil(r.parkingOpen) >= 0) allDeadlines.push({ label: `${r.city} parking opens`, date: r.parkingOpen, round: r.id });
-      if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) allDeadlines.push({ label: `${r.city} camping opens`, date: r.campingOpen, round: r.id });
-      if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) allDeadlines.push({ label: `${r.city} gazebo booking opens`, date: r.gazeboBookingOpen, round: r.id });
+  WEEKENDS.forEach(w => {
+    if (new Date(w.dates[0]) >= now) {
+      if (daysUntil(w.entryClose) >= 0) allDeadlines.push({ label: `${w.city} entries close`, date: w.entryClose });
+      if (daysUntil(w.parkingOpen) >= 0) allDeadlines.push({ label: `${w.city} parking opens`, date: w.parkingOpen });
+      if (w.campingAvailable && daysUntil(w.campingOpen) >= 0) allDeadlines.push({ label: `${w.city} camping opens`, date: w.campingOpen });
+      if (w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" && daysUntil(w.gazeboBookingOpen) >= 0) allDeadlines.push({ label: `${w.city} gazebo booking opens`, date: w.gazeboBookingOpen });
     }
   });
   allDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -205,42 +219,40 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 4);
 
-  const myRoundsList = rounds.filter(r => myRounds.has(r.id) && new Date(r.date) >= now);
+  const myWeekendsList = WEEKENDS.filter(w => myRounds.has(w.weekendId) && new Date(w.dates[0]) >= now);
   const myDeadlines = [];
-  const seenMyWeekends = new Set();
-  myRoundsList.forEach(r => {
-    if (seenMyWeekends.has(r.practiceDate)) return;
-    seenMyWeekends.add(r.practiceDate);
-    if (daysUntil(r.entryClose) >= 0) myDeadlines.push({ label: `${r.city} entries close`, date: r.entryClose, city: r.city, roundId: r.id });
-    if (daysUntil(r.parkingOpen) >= 0) myDeadlines.push({ label: `${r.city} parking opens`, date: r.parkingOpen, city: r.city, roundId: r.id });
-    if (r.campingAvailable && daysUntil(r.campingOpen) >= 0) myDeadlines.push({ label: `${r.city} camping opens`, date: r.campingOpen, city: r.city, roundId: r.id });
-    if (r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" && daysUntil(r.gazeboBookingOpen) >= 0) myDeadlines.push({ label: `${r.city} gazebo opens`, date: r.gazeboBookingOpen, city: r.city, roundId: r.id });
+  myWeekendsList.forEach(w => {
+    if (daysUntil(w.entryClose) >= 0) myDeadlines.push({ label: `${w.city} entries close`, date: w.entryClose, city: w.city });
+    if (daysUntil(w.parkingOpen) >= 0) myDeadlines.push({ label: `${w.city} parking opens`, date: w.parkingOpen, city: w.city });
+    if (w.campingAvailable && daysUntil(w.campingOpen) >= 0) myDeadlines.push({ label: `${w.city} camping opens`, date: w.campingOpen, city: w.city });
+    if (w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" && daysUntil(w.gazeboBookingOpen) >= 0) myDeadlines.push({ label: `${w.city} gazebo opens`, date: w.gazeboBookingOpen, city: w.city });
   });
   myDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   return (
     <div>
-      {nextRound && (
+      {nextWeekend && (
         <div style={{
           background: `linear-gradient(135deg, ${COLORS.red}22, ${COLORS.blue}22)`,
           border: `1px solid ${COLORS.border}`,
           borderRadius: 12, padding: 24, marginBottom: 24,
         }}>
           <div style={{ fontSize: 11, letterSpacing: 2, color: COLORS.red, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase" }}>
-            Next Round
+            Next Weekend
           </div>
           <div style={{ fontSize: 28, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary, marginBottom: 4 }}>
-            Round {nextRound.round} — {nextRound.venue}
+            Rounds {nextWeekend.roundNumbers.join(" & ")} — {nextWeekend.venue}
           </div>
           <div style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 16 }}>
-            {formatDate(nextRound.date)} · {nextRound.city}
+            {nextWeekend.dates.map(formatDate).join(" · ")} · {nextWeekend.city}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {[
-              { label: "Race Day", date: nextRound.date },
-              { label: "Practice", date: nextRound.practiceDate },
-              { label: "Entries close", date: nextRound.entryClose },
-            ].map(item => {
+              { label: "Practice", date: nextWeekend.practiceDate },
+              { label: "Day 1", date: nextWeekend.dates[0] },
+              { label: "Day 2", date: nextWeekend.dates[1] },
+              { label: "Entries close", date: nextWeekend.entryClose },
+            ].filter(item => item.date).map(item => {
               const d = daysUntil(item.date);
               return (
                 <div key={item.label} style={{
@@ -255,33 +267,33 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
               );
             })}
           </div>
-          <button onClick={() => onSelectRound(nextRound)} style={{
+          <button onClick={() => onSelectWeekend(nextWeekend)} style={{
             marginTop: 16, background: COLORS.red, color: "#fff", border: "none",
             borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 13, fontWeight: 600,
           }}>
-            View Round Details →
+            View Weekend Details →
           </button>
         </div>
       )}
 
-      {myRoundsList.length > 0 && (
+      {myWeekendsList.length > 0 && (
         <div style={{
           background: `${COLORS.blue}0d`, border: `1px solid ${COLORS.blue}44`,
           borderRadius: 12, padding: 20, marginBottom: 16,
         }}>
           <div style={{ fontSize: 12, color: COLORS.blue, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
-            My Season — {myRoundsList.length} round{myRoundsList.length > 1 ? "s" : ""}
+            My Season — {myWeekendsList.length} weekend{myWeekendsList.length > 1 ? "s" : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: myDeadlines.length > 0 ? 14 : 0 }}>
-            {myRoundsList.map(r => {
-              const days = daysUntil(r.date);
+            {myWeekendsList.map(w => {
+              const days = daysUntil(w.dates[0]);
               return (
-                <div key={r.id} onClick={() => onSelectRound(r)} style={{
+                <div key={w.weekendId} onClick={() => onSelectWeekend(w)} style={{
                   background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
                   borderRadius: 8, padding: "8px 14px", cursor: "pointer", textAlign: "center",
                 }}>
-                  <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>R{r.round}</div>
-                  <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{r.city}</div>
+                  <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>R{w.roundNumbers.join("&")}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{w.city}</div>
                   <div style={{ fontSize: 11, color: days <= 14 ? COLORS.red : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
                     {days === 0 ? "Today" : `${days}d`}
                   </div>
@@ -299,7 +311,7 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
                 }}>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: 13, color: COLORS.textPrimary }}>{d.label}</span>
-                    <span style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>{d.city} · {formatDate(d.date)}</span>
+                    <span style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>{formatDate(d.date)}</span>
                   </div>
                   {(() => {
                     const days = daysUntil(d.date);
@@ -332,12 +344,12 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
           <div style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             Season Overview
           </div>
-          {rounds.map(r => {
-            const past = new Date(r.date) < now;
-            const isNext = nextRound && r.id === nextRound.id;
-            const isMine = myRounds.has(r.id);
+          {WEEKENDS.map(w => {
+            const past = new Date(w.dates[w.dates.length - 1]) < now;
+            const isNext = nextWeekend && w.weekendId === nextWeekend.weekendId;
+            const isMine = myRounds.has(w.weekendId);
             return (
-              <div key={r.id} style={{
+              <div key={w.weekendId} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
                 borderBottom: `1px solid ${COLORS.border}`,
                 background: isMine ? `${COLORS.blue}0a` : "transparent",
@@ -346,22 +358,22 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
                 opacity: past ? 0.45 : 1,
                 transition: "all 0.15s",
               }}>
-                <div onClick={() => onSelectRound(r)} style={{
-                  width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
+                <div onClick={() => onSelectWeekend(w)} style={{
+                  height: 28, borderRadius: 14, cursor: "pointer",
                   background: isMine ? COLORS.blue : isNext ? COLORS.red : past ? COLORS.textMuted : COLORS.border,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0,
+                  fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, padding: "0 8px",
                 }}>
-                  {r.round}
+                  {w.roundNumbers.join("·")}
                 </div>
-                <div onClick={() => onSelectRound(r)} style={{ flex: 1, cursor: "pointer" }}>
-                  <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: isMine ? 600 : 500 }}>{r.city}</div>
-                  <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{formatDate(r.date)}</div>
+                <div onClick={() => onSelectWeekend(w)} style={{ flex: 1, cursor: "pointer" }}>
+                  <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: isMine ? 600 : 500 }}>{w.city}</div>
+                  <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{formatDate(w.dates[0])} – {formatDate(w.dates[w.dates.length - 1])}</div>
                 </div>
                 {isNext && !isMine && <div style={{ fontSize: 10, color: COLORS.red, fontWeight: 700, letterSpacing: 1 }}>NEXT</div>}
                 {past && <div style={{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 }}>DONE</div>}
                 {!past && (
-                  <button onClick={(e) => { e.stopPropagation(); toggleMyRound(r.id); }} style={{
+                  <button onClick={(e) => { e.stopPropagation(); toggleMyRound(w.weekendId); }} style={{
                     background: isMine ? `${COLORS.blue}22` : "none",
                     border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
                     color: isMine ? COLORS.blue : COLORS.textMuted,
@@ -414,26 +426,34 @@ function Dashboard({ rounds, onSelectRound, myRounds, toggleMyRound }) {
   );
 }
 
-function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRounds, toggleMyRound, bookings, updateBooking }) {
-  const isMine = myRounds && myRounds.has(round.id);
-  const accomKey = Object.keys(ACCOMMODATION_DATA).find(k => k.split(",").map(Number).includes(round.id));
+function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myRounds, toggleMyRound, bookings, updateBooking }) {
+  const isMine = myRounds && myRounds.has(weekend.weekendId);
+  const accomKey = Object.keys(ACCOMMODATION_DATA).find(k =>
+    k.split(",").map(Number).some(id => weekend.rounds.map(r => r.id).includes(id))
+  );
   const accommodation = accomKey ? ACCOMMODATION_DATA[accomKey] : [];
+
   const sections = [
-    { key: "race", label: "Race Day", date: round.date, color: COLORS.red },
-    { key: "practice", label: "Practice Day", date: round.practiceDate, color: COLORS.blue },
-    { key: "entry_open", label: "Entries Open", date: round.entryOpen, color: COLORS.green },
-    { key: "entry_close", label: "Entries Close", date: round.entryClose, color: COLORS.yellow },
-    { key: "parking_open", label: "Parking Opens", date: round.parkingOpen, color: "#e67e22" },
-    ...(round.campingAvailable ? [
-      { key: "camping_open", label: "Camping Opens", date: round.campingOpen, color: "#1abc9c" },
+    ...weekend.dates.map((date, i) => ({
+      key: `race_${i}`,
+      label: weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day",
+      date,
+      color: COLORS.red,
+    })),
+    { key: "practice", label: "Practice Day", date: weekend.practiceDate, color: COLORS.blue },
+    { key: "entry_open", label: "Entries Open", date: weekend.entryOpen, color: COLORS.green },
+    { key: "entry_close", label: "Entries Close", date: weekend.entryClose, color: COLORS.yellow },
+    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, color: "#e67e22" },
+    ...(weekend.campingAvailable ? [
+      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen, color: "#1abc9c" },
     ] : []),
-    ...(round.gazeboBookingOpen && round.gazeboBookingOpen !== "TBC" ? [
-      { key: "gazebo_open", label: "Gazebo Booking Opens", date: round.gazeboBookingOpen, color: "#9b59b6" },
+    ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
+      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, color: "#9b59b6" },
     ] : []),
   ];
 
   const categories = [...new Set(DEFAULT_CHECKLIST.map(i => i.category))];
-  const checked = checklist[round.id] || {};
+  const checked = checklist[weekend.weekendId] || {};
   const totalItems = DEFAULT_CHECKLIST.length;
   const checkedCount = Object.values(checked).filter(Boolean).length;
 
@@ -448,14 +468,14 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
 
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
-          Round {round.round}
+          Rounds {weekend.roundNumbers.join(" & ")}
         </div>
         <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>
-          {round.venue}
+          {weekend.venue}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 15, color: COLORS.textSecondary }}>{round.city} · {formatDate(round.date)}</div>
-          {round.isNatChamps && (
+          <div style={{ fontSize: 15, color: COLORS.textSecondary }}>{weekend.city} · {weekend.dates.map(formatDate).join(" & ")}</div>
+          {weekend.isNatChamps && (
             <div style={{
               fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
               background: `${COLORS.yellow}22`, color: COLORS.yellow,
@@ -463,18 +483,18 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
             }}>★ Nat Champs Weekend</div>
           )}
         </div>
-        {(round.website || round.facebook) && (
+        {(weekend.website || weekend.facebook) && (
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            {round.website && (
-              <a href={round.website} target="_blank" rel="noreferrer" style={{
+            {weekend.website && (
+              <a href={weekend.website} target="_blank" rel="noreferrer" style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
                 borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
                 textDecoration: "none", fontWeight: 500,
               }}>🌐 Website</a>
             )}
-            {round.facebook && (
-              <a href={round.facebook} target="_blank" rel="noreferrer" style={{
+            {weekend.facebook && (
+              <a href={weekend.facebook} target="_blank" rel="noreferrer" style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
                 borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#1877f2",
@@ -482,7 +502,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
               }}>f Facebook</a>
             )}
             {toggleMyRound && (
-              <button onClick={() => toggleMyRound(round.id)} style={{
+              <button onClick={() => toggleMyRound(weekend.weekendId)} style={{
                 background: isMine ? `${COLORS.blue}22` : COLORS.card,
                 border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
                 color: isMine ? COLORS.blue : COLORS.textSecondary,
@@ -499,7 +519,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
         const items = [
           { key: "entry", label: "Race entry submitted" },
           { key: "parking", label: "Parking booked" },
-          { key: "gazebo", label: "Gazebo booked", showIf: !!round.gazeboBookingOpen },
+          { key: "gazebo", label: "Gazebo booked", showIf: !!weekend.gazeboBookingOpen },
           { key: "hotel", label: "Accommodation booked", hasDetails: true },
           { key: "practice", label: "Practice session booked" },
         ].filter(i => i.showIf !== false);
@@ -515,10 +535,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
               const showForm = isChecked && item.hasDetails;
               return (
                 <div key={item.key} style={{ borderBottom: `1px solid ${COLORS.border}`, paddingBottom: 12, marginBottom: 12 }}>
-                  <div
-                    onClick={() => updateBooking(item.key, !isChecked)}
-                    style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
-                  >
+                  <div onClick={() => updateBooking(item.key, !isChecked)} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
                     <div style={{
                       width: 20, height: 20, borderRadius: 5, flexShrink: 0,
                       border: `2px solid ${isChecked ? COLORS.green : COLORS.border}`,
@@ -581,17 +598,10 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
         {sections.map(s => {
           const d = daysUntil(s.date);
           return (
-            <div key={s.key} style={{
-              background: COLORS.card, border: `1px solid ${COLORS.border}`,
-              borderRadius: 10, padding: "14px 16px",
-            }}>
+            <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
-              {d >= 0 && (
-                <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>
-                  {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}
-                </div>
-              )}
+              {d >= 0 && <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
@@ -601,36 +611,36 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
           <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Gazebo / Team Area</div>
-          {round.gazeboBookingOpen && (
+          {weekend.gazeboBookingOpen && (
             <div style={{
               display: "inline-block", fontSize: 11, fontWeight: 700, marginBottom: 10,
-              color: round.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6",
-              background: round.gazeboBookingOpen === "TBC" ? `${COLORS.textMuted}18` : "#9b59b622",
-              border: `1px solid ${round.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6"}44`,
+              color: weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6",
+              background: weekend.gazeboBookingOpen === "TBC" ? `${COLORS.textMuted}18` : "#9b59b622",
+              border: `1px solid ${weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6"}44`,
               borderRadius: 20, padding: "3px 10px",
             }}>
-              Booking opens: {round.gazeboBookingOpen === "TBC" ? "TBC" : formatDate(round.gazeboBookingOpen)}
+              Booking opens: {weekend.gazeboBookingOpen === "TBC" ? "TBC" : formatDate(weekend.gazeboBookingOpen)}
             </div>
           )}
-          <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{round.gazeboInfo}</div>
+          <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.gazeboInfo}</div>
         </div>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
           <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Travel & Parking</div>
-          <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{round.travelTip}</div>
+          <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.travelTip}</div>
         </div>
-        {round.practiceInfo && (
+        {weekend.practiceInfo && (
           <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 10, padding: 18 }}>
             <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Practice Info</div>
-            <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{round.practiceInfo}</div>
+            <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.practiceInfo}</div>
           </div>
         )}
-        {round.campingInfo && (
+        {weekend.campingInfo && (
           <div style={{ background: COLORS.card, border: `1px solid #1abc9c44`, borderRadius: 10, padding: 18 }}>
             <div style={{ fontSize: 12, color: "#1abc9c", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping Details</div>
-            <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{round.campingInfo}</div>
+            <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.campingInfo}</div>
           </div>
         )}
-        {!round.campingAvailable && (
+        {!weekend.campingAvailable && (
           <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
             <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping</div>
             <div style={{ fontSize: 13, color: COLORS.textMuted, fontStyle: "italic" }}>No camping available at this venue.</div>
@@ -639,7 +649,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
       </div>
 
       {(() => {
-        const sessions = COACHING_DATA.filter(s => s.roundIds.includes(round.id));
+        const sessions = COACHING_DATA.filter(s => weekend.rounds.some(r => s.roundIds.includes(r.id)));
         if (sessions.length === 0) return null;
         return (
           <div style={{ background: COLORS.card, border: `1px solid #9b59b644`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
@@ -689,10 +699,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
             Accommodation
           </div>
           {accommodation.map(a => (
-            <div key={a.id} style={{
-              display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 0",
-              borderBottom: `1px solid ${COLORS.border}`,
-            }}>
+            <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 0", borderBottom: `1px solid ${COLORS.border}` }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{a.name}</div>
@@ -704,9 +711,7 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
                   }}>{a.type}</div>
                 </div>
                 <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4 }}>📍 {a.distance}</div>
-                {a.communityNotes && (
-                  <div style={{ fontSize: 12, color: COLORS.textSecondary, fontStyle: "italic" }}>"{a.communityNotes}"</div>
-                )}
+                {a.communityNotes && <div style={{ fontSize: 12, color: COLORS.textSecondary, fontStyle: "italic" }}>"{a.communityNotes}"</div>}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                 <div style={{ display: "flex", gap: 2 }}>
@@ -734,27 +739,20 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
             {checkedCount}/{totalItems}
           </div>
         </div>
-
-        <div style={{
-          height: 6, background: COLORS.border, borderRadius: 3, marginBottom: 20, overflow: "hidden",
-        }}>
+        <div style={{ height: 6, background: COLORS.border, borderRadius: 3, marginBottom: 20, overflow: "hidden" }}>
           <div style={{
             height: "100%", width: `${(checkedCount / totalItems) * 100}%`,
             background: checkedCount === totalItems ? COLORS.green : COLORS.red,
             borderRadius: 3, transition: "width 0.3s ease",
           }} />
         </div>
-
         {categories.map(cat => (
           <div key={cat} style={{ marginBottom: 18 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
-              color: CATEGORY_COLORS[cat], textTransform: "uppercase", marginBottom: 8,
-            }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: CATEGORY_COLORS[cat], textTransform: "uppercase", marginBottom: 8 }}>
               {cat}
             </div>
             {DEFAULT_CHECKLIST.filter(i => i.category === cat).map(item => (
-              <div key={item.id} onClick={() => onToggle(round.id, item.id)} style={{
+              <div key={item.id} onClick={() => onToggle(weekend.weekendId, item.id)} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "9px 0",
                 borderBottom: `1px solid ${COLORS.border}`, cursor: "pointer",
               }}>
@@ -782,42 +780,42 @@ function EventDetail({ round, checklist, onToggle, onBack, onViewCoaching, myRou
   );
 }
 
-function CalendarView({ rounds, onSelectRound, myRounds }) {
+function CalendarView({ onSelectWeekend, myRounds }) {
   const now = new Date();
   return (
     <div>
       <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 20 }}>
         2026 National Series
       </div>
-      {rounds.map(r => {
-        const past = new Date(r.date) < now;
+      {WEEKENDS.map(w => {
+        const past = new Date(w.dates[w.dates.length - 1]) < now;
         const deadlines = [
-          { label: "Entries open", date: r.entryOpen },
-          { label: "Parking opens", date: r.parkingOpen },
-          ...(r.campingAvailable ? [{ label: "Camping opens", date: r.campingOpen }] : []),
-          ...(r.gazeboBookingOpen && r.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: r.gazeboBookingOpen }] : []),
-          { label: "Entries close", date: r.entryClose },
-          { label: "Practice", date: r.practiceDate },
-          { label: "Race day", date: r.date },
-        ].sort((a, b) => new Date(a.date) - new Date(b.date));
+          { label: "Entries open", date: w.entryOpen },
+          { label: "Parking opens", date: w.parkingOpen },
+          ...(w.campingAvailable ? [{ label: "Camping opens", date: w.campingOpen }] : []),
+          ...(w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: w.gazeboBookingOpen }] : []),
+          { label: "Entries close", date: w.entryClose },
+          { label: "Practice", date: w.practiceDate },
+          ...w.dates.map((date, i) => ({ label: w.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
+        ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date));
 
         return (
-          <div key={r.id} style={{
+          <div key={w.weekendId} style={{
             background: COLORS.card,
-            border: `1px solid ${myRounds && myRounds.has(r.id) ? COLORS.blue : COLORS.border}`,
-            borderLeft: `4px solid ${past ? COLORS.textMuted : myRounds && myRounds.has(r.id) ? COLORS.blue : COLORS.red}`,
+            border: `1px solid ${myRounds && myRounds.has(w.weekendId) ? COLORS.blue : COLORS.border}`,
+            borderLeft: `4px solid ${past ? COLORS.textMuted : myRounds && myRounds.has(w.weekendId) ? COLORS.blue : COLORS.red}`,
             borderRadius: 10, padding: 20, marginBottom: 16, opacity: past ? 0.55 : 1,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
-                  Round {r.round}
+                  Rounds {w.roundNumbers.join(" & ")}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <div style={{ fontSize: 22, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 0.5, color: COLORS.textPrimary }}>
-                    {r.venue} — {r.city}
+                    {w.venue} — {w.city}
                   </div>
-                  {r.isNatChamps && (
+                  {w.isNatChamps && (
                     <div style={{
                       fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
                       background: `${COLORS.yellow}22`, color: COLORS.yellow,
@@ -826,7 +824,7 @@ function CalendarView({ rounds, onSelectRound, myRounds }) {
                   )}
                 </div>
               </div>
-              <button onClick={() => onSelectRound(r)} style={{
+              <button onClick={() => onSelectWeekend(w)} style={{
                 background: COLORS.red, color: "#fff", border: "none",
                 borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
               }}>
@@ -836,16 +834,16 @@ function CalendarView({ rounds, onSelectRound, myRounds }) {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {deadlines.map((d, i) => {
                 const days = daysUntil(d.date);
-                const isRace = d.label === "Race day";
+                const isRaceDay = d.label.startsWith("Day") || d.label === "Race day";
                 return (
                   <div key={i} style={{
                     padding: "5px 12px", borderRadius: 20,
-                    background: isRace ? `${COLORS.red}22` : COLORS.surface,
-                    border: `1px solid ${isRace ? COLORS.red : COLORS.border}`,
+                    background: isRaceDay ? `${COLORS.red}22` : COLORS.surface,
+                    border: `1px solid ${isRaceDay ? COLORS.red : COLORS.border}`,
                     fontSize: 12,
                   }}>
                     <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
-                    <span style={{ color: isRace ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
+                    <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
                     {days >= 0 && days <= 30 && (
                       <span style={{ color: COLORS.yellow, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
                     )}
@@ -862,7 +860,7 @@ function CalendarView({ rounds, onSelectRound, myRounds }) {
 
 export default function App() {
   const [view, setView] = useState("dashboard");
-  const [selectedRound, setSelectedRound] = useState(null);
+  const [selectedWeekend, setSelectedWeekend] = useState(null);
 
   const [checklist, setChecklist] = useState(() => {
     try { return JSON.parse(localStorage.getItem("msbmx_checklist") || "{}"); } catch { return {}; }
@@ -886,32 +884,32 @@ export default function App() {
     localStorage.setItem("msbmx_bookings", JSON.stringify(bookings));
   }, [bookings]);
 
-  function toggleMyRound(roundId) {
+  function toggleMyRound(weekendId) {
     setMyRounds(prev => {
       const next = new Set(prev);
-      next.has(roundId) ? next.delete(roundId) : next.add(roundId);
+      next.has(weekendId) ? next.delete(weekendId) : next.add(weekendId);
       return next;
     });
   }
 
-  function updateBooking(roundId, key, value) {
+  function updateBooking(weekendId, key, value) {
     setBookings(prev => ({
       ...prev,
-      [roundId]: { ...(prev[roundId] || {}), [key]: value },
+      [weekendId]: { ...(prev[weekendId] || {}), [key]: value },
     }));
   }
 
-  function handleSelectRound(round) {
-    setSelectedRound(round);
+  function handleSelectWeekend(weekend) {
+    setSelectedWeekend(weekend);
     setView("detail");
   }
 
-  function handleToggle(roundId, itemId) {
+  function handleToggle(weekendId, itemId) {
     setChecklist(prev => ({
       ...prev,
-      [roundId]: {
-        ...(prev[roundId] || {}),
-        [itemId]: !(prev[roundId]?.[itemId]),
+      [weekendId]: {
+        ...(prev[weekendId] || {}),
+        [itemId]: !(prev[weekendId]?.[itemId]),
       },
     }));
   }
@@ -945,10 +943,10 @@ export default function App() {
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {navItems.map(n => (
-            <button key={n.key} onClick={() => { setView(n.key); setSelectedRound(null); }} style={{
-              background: view === n.key && !selectedRound ? `${COLORS.red}22` : "none",
-              border: `1px solid ${view === n.key && !selectedRound ? COLORS.red : "transparent"}`,
-              color: view === n.key && !selectedRound ? COLORS.red : COLORS.textSecondary,
+            <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
+              background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
+              border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
+              color: view === n.key && !selectedWeekend ? COLORS.red : COLORS.textSecondary,
               borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500,
             }}>
               {n.label}
@@ -958,13 +956,23 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
-        {view === "detail" && selectedRound
-          ? <EventDetail round={selectedRound} checklist={checklist} onToggle={handleToggle} onBack={() => { setView("dashboard"); setSelectedRound(null); }} onViewCoaching={() => { setView("coaching"); setSelectedRound(null); }} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings[selectedRound.id] || {}} updateBooking={(key, value) => updateBooking(selectedRound.id, key, value)} />
+        {view === "detail" && selectedWeekend
+          ? <EventDetail
+              weekend={selectedWeekend}
+              checklist={checklist}
+              onToggle={handleToggle}
+              onBack={() => { setView("dashboard"); setSelectedWeekend(null); }}
+              onViewCoaching={() => { setView("coaching"); setSelectedWeekend(null); }}
+              myRounds={myRounds}
+              toggleMyRound={toggleMyRound}
+              bookings={bookings[selectedWeekend.weekendId] || {}}
+              updateBooking={(key, value) => updateBooking(selectedWeekend.weekendId, key, value)}
+            />
           : view === "calendar"
-          ? <CalendarView rounds={SEASON_DATA} onSelectRound={handleSelectRound} myRounds={myRounds} />
+          ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} />
           : view === "coaching"
-          ? <CoachingView rounds={SEASON_DATA} />
-          : <Dashboard rounds={SEASON_DATA} onSelectRound={handleSelectRound} myRounds={myRounds} toggleMyRound={toggleMyRound} />
+          ? <CoachingView />
+          : <Dashboard onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />
         }
       </div>
     </div>

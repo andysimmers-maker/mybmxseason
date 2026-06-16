@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import SEASON_DATA from "./seasons.json";
 import COACHING_DATA from "./coaching.json";
 import ACCOMMODATION_DATA from "./accommodation.json";
+import { supabase } from "./supabase";
 
 const COLORS = {
   bg: "#0d0d0d",
@@ -861,42 +862,88 @@ function CalendarView({ onSelectWeekend, myRounds }) {
 export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedWeekend, setSelectedWeekend] = useState(null);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginSent, setLoginSent] = useState(false);
 
-  const [checklist, setChecklist] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("msbmx_checklist") || "{}"); } catch { return {}; }
-  });
-  const [myRounds, setMyRounds] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("msbmx_myRounds") || "[]")); } catch { return new Set(); }
-  });
-  const [bookings, setBookings] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("msbmx_bookings") || "{}"); } catch { return {}; }
-  });
+  const [checklist, setChecklist] = useState({});
+  const [myRounds, setMyRounds] = useState(new Set());
+  const [bookings, setBookings] = useState({});
 
   useEffect(() => {
-    localStorage.setItem("msbmx_checklist", JSON.stringify(checklist));
-  }, [checklist]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+      if (session) loadUserData(session.user.id);
+    });
 
-  useEffect(() => {
-    localStorage.setItem("msbmx_myRounds", JSON.stringify([...myRounds]));
-  }, [myRounds]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) loadUserData(session.user.id);
+      else { setMyRounds(new Set()); setBookings({}); setChecklist({}); }
+    });
 
-  useEffect(() => {
-    localStorage.setItem("msbmx_bookings", JSON.stringify(bookings));
-  }, [bookings]);
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function loadUserData(userId) {
+    const [roundsRes, bookingsRes, checklistRes] = await Promise.all([
+      supabase.from("user_rounds").select("weekend_id").eq("user_id", userId),
+      supabase.from("user_bookings").select("weekend_id, data").eq("user_id", userId),
+      supabase.from("user_checklist").select("weekend_id, data").eq("user_id", userId),
+    ]);
+    if (roundsRes.data) setMyRounds(new Set(roundsRes.data.map(r => r.weekend_id)));
+    if (bookingsRes.data) {
+      const b = {};
+      bookingsRes.data.forEach(row => { b[row.weekend_id] = row.data; });
+      setBookings(b);
+    }
+    if (checklistRes.data) {
+      const c = {};
+      checklistRes.data.forEach(row => { c[row.weekend_id] = row.data; });
+      setChecklist(c);
+    }
+  }
+
+  async function sendMagicLink(e) {
+    e.preventDefault();
+    await supabase.auth.signInWithOtp({
+      email: loginEmail,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setLoginSent(true);
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
 
   function toggleMyRound(weekendId) {
     setMyRounds(prev => {
       const next = new Set(prev);
-      next.has(weekendId) ? next.delete(weekendId) : next.add(weekendId);
+      if (next.has(weekendId)) {
+        next.delete(weekendId);
+        supabase.from("user_rounds").delete()
+          .eq("user_id", session.user.id).eq("weekend_id", weekendId).then();
+      } else {
+        next.add(weekendId);
+        supabase.from("user_rounds").insert({ user_id: session.user.id, weekend_id: weekendId }).then();
+      }
       return next;
     });
   }
 
   function updateBooking(weekendId, key, value) {
-    setBookings(prev => ({
-      ...prev,
-      [weekendId]: { ...(prev[weekendId] || {}), [key]: value },
-    }));
+    setBookings(prev => {
+      const updated = { ...(prev[weekendId] || {}), [key]: value };
+      const next = { ...prev, [weekendId]: updated };
+      supabase.from("user_bookings").upsert(
+        { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,weekend_id" }
+      ).then();
+      return next;
+    });
   }
 
   function handleSelectWeekend(weekend) {
@@ -905,13 +952,15 @@ export default function App() {
   }
 
   function handleToggle(weekendId, itemId) {
-    setChecklist(prev => ({
-      ...prev,
-      [weekendId]: {
-        ...(prev[weekendId] || {}),
-        [itemId]: !(prev[weekendId]?.[itemId]),
-      },
-    }));
+    setChecklist(prev => {
+      const updated = { ...(prev[weekendId] || {}), [itemId]: !(prev[weekendId]?.[itemId]) };
+      const next = { ...prev, [weekendId]: updated };
+      supabase.from("user_checklist").upsert(
+        { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,weekend_id" }
+      ).then();
+      return next;
+    });
   }
 
   const navItems = [
@@ -920,11 +969,55 @@ export default function App() {
     { key: "coaching", label: "Coaching" },
   ];
 
+  if (authLoading) return (
+    <div style={{ background: COLORS.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Loading...</div>
+    </div>
+  );
+
+  if (!session) return (
+    <div style={{ background: COLORS.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 40, width: "100%", maxWidth: 380, textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 32 }}>
+          <div style={{ width: 32, height: 32, background: COLORS.red, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff" }}>B</div>
+          <span style={{ fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>My BMX Season</span>
+        </div>
+        {!loginSent ? (
+          <form onSubmit={sendMagicLink}>
+            <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 20 }}>Enter your email to sign in</div>
+            <input
+              type="email"
+              required
+              placeholder="your@email.com"
+              value={loginEmail}
+              onChange={e => setLoginEmail(e.target.value)}
+              style={{
+                width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+                borderRadius: 8, padding: "10px 14px", fontSize: 14, color: COLORS.textPrimary,
+                outline: "none", boxSizing: "border-box", marginBottom: 12,
+              }}
+            />
+            <button type="submit" style={{
+              width: "100%", background: COLORS.red, color: "#fff", border: "none",
+              borderRadius: 8, padding: 11, cursor: "pointer", fontSize: 14, fontWeight: 600,
+            }}>
+              Send sign-in link
+            </button>
+          </form>
+        ) : (
+          <div>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
+            <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 8 }}>Check your email</div>
+            <div style={{ fontSize: 13, color: COLORS.textSecondary }}>We sent a sign-in link to <strong style={{ color: COLORS.textPrimary }}>{loginEmail}</strong></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{
-      background: COLORS.bg, minHeight: "100vh", color: COLORS.textPrimary,
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-    }}>
+    <div style={{ background: COLORS.bg, minHeight: "100vh", color: COLORS.textPrimary, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
       <div style={{
@@ -934,24 +1027,29 @@ export default function App() {
         height: 56, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, background: COLORS.red, borderRadius: 6,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 900, color: "#fff",
-          }}>B</div>
+          <div style={{ width: 28, height: 28, background: COLORS.red, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#fff" }}>B</div>
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.3 }}>My BMX Season</span>
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {navItems.map(n => (
-            <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
-              background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
-              border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
-              color: view === n.key && !selectedWeekend ? COLORS.red : COLORS.textSecondary,
-              borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500,
-            }}>
-              {n.label}
-            </button>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {navItems.map(n => (
+              <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
+                background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
+                border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
+                color: view === n.key && !selectedWeekend ? COLORS.red : COLORS.textSecondary,
+                borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500,
+              }}>
+                {n.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 12, borderLeft: `1px solid ${COLORS.border}` }}>
+            <span style={{ fontSize: 12, color: COLORS.textMuted }}>{session.user.email}</span>
+            <button onClick={signOut} style={{
+              background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textMuted,
+              borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11,
+            }}>Sign out</button>
+          </div>
         </div>
       </div>
 

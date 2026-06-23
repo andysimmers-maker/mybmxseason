@@ -330,7 +330,7 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             Upcoming Deadlines
@@ -1035,7 +1035,7 @@ export default function App() {
     <div style={{ background: COLORS.bg, minHeight: "100vh", color: COLORS.textPrimary, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      <div style={{
+      <div className="app-header" style={{
         borderBottom: `1px solid ${COLORS.border}`,
         padding: "0 24px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -1045,7 +1045,7 @@ export default function App() {
           <div style={{ width: 28, height: 28, background: COLORS.red, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#fff" }}>B</div>
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.3 }}>My BMX Season</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="app-header-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", gap: 4 }}>
             {navItems.map(n => (
               <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{

@@ -21,7 +21,6 @@ const COLORS = {
 };
 
 const PLATFORM_COLORS = { "Spond": "#00b894", "Website": COLORS.blue };
-const SOCIAL_COLORS = { website: COLORS.blue, facebook: "#1877F2", instagram: "#E1306C" };
 
 const WEEKENDS = (() => {
   const map = new Map();
@@ -337,7 +336,7 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
                 : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
                 : "CLUB";
               const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
-              const clickable = e.type === "national";
+              const clickable = e.type === "national" || e.type === "north";
               return (
                 <div key={e.key} onClick={clickable ? () => onSelectWeekend(e) : undefined} style={{
                   background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
@@ -842,6 +841,98 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
   );
 }
 
+function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
+  const isMine = myRounds && myRounds.has(event.key);
+  const isTbc = event.status === "tbc";
+
+  const sections = [
+    ...(isTbc ? [] : [{ key: "reg", label: "Registration closes (11:45am)", date: dayBefore(event.date), color: COLORS.yellow }]),
+    { key: "race", label: "Race day", date: event.date, color: COLORS.red },
+  ];
+
+  return (
+    <div>
+      <button onClick={onBack} style={{
+        background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary,
+        borderRadius: 8, padding: "8px 16px", cursor: "pointer", marginBottom: 20, fontSize: 13,
+      }}>
+        ← Back
+      </button>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+          North Region · {event.name}
+        </div>
+        <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>
+          {event.location}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 15, color: COLORS.textSecondary }}>
+            {event.venue}{event.address ? ` · ${event.address}` : ""} · {formatDate(event.date)}
+          </div>
+          {isTbc && (
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
+              background: `${COLORS.textMuted}22`, color: COLORS.textMuted,
+              border: `1px solid ${COLORS.textMuted}55`, borderRadius: 20, padding: "3px 10px",
+            }}>Date TBC</div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          {event.website && (
+            <a href={event.website} target="_blank" rel="noreferrer" style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
+              textDecoration: "none", fontWeight: 500,
+            }}>🌐 Website</a>
+          )}
+          {event.facebook && (
+            <a href={event.facebook} target="_blank" rel="noreferrer" style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#1877f2",
+              textDecoration: "none", fontWeight: 500,
+            }}>f Facebook</a>
+          )}
+          {event.instagram && (
+            <a href={event.instagram} target="_blank" rel="noreferrer" style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#E1306C",
+              textDecoration: "none", fontWeight: 500,
+            }}>📷 Instagram</a>
+          )}
+          {toggleMyRound && (
+            <button onClick={() => toggleMyRound(event.key)} style={{
+              background: isMine ? `${COLORS.blue}22` : COLORS.card,
+              border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
+              color: isMine ? COLORS.blue : COLORS.textSecondary,
+              borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+            }}>
+              {isMine ? "✓ I'm Going" : "+ I'm Going"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+        {sections.map(s => {
+          const d = daysUntil(s.date);
+          return (
+            <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
+              <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
+              <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
+              {d >= 0 && <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
   const now = new Date();
   const [filterType, setFilterType] = useState("All");
@@ -924,9 +1015,6 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                     }}>Date TBC</div>
                   )}
                 </div>
-                {e.type === "north" && (
-                  <div style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 2 }}>{e.name} · {e.venue}</div>
-                )}
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 {!past && (
@@ -939,7 +1027,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                     {isMine ? "✓ Going" : "+ Going"}
                   </button>
                 )}
-                {e.type === "national" && (
+                {(e.type === "national" || e.type === "north") && (
                   <button onClick={() => onSelectWeekend(e)} style={{
                     background: COLORS.red, color: "#fff", border: "none",
                     borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
@@ -949,31 +1037,6 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                 )}
               </div>
             </div>
-            {e.type === "north" && (e.website || e.facebook || e.instagram || e.address) && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                {e.website && (
-                  <a href={e.website} target="_blank" rel="noreferrer" style={{
-                    background: SOCIAL_COLORS.website, color: "#fff", borderRadius: 20,
-                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
-                  }}>Website</a>
-                )}
-                {e.facebook && (
-                  <a href={e.facebook} target="_blank" rel="noreferrer" style={{
-                    background: SOCIAL_COLORS.facebook, color: "#fff", borderRadius: 20,
-                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
-                  }}>Facebook</a>
-                )}
-                {e.instagram && (
-                  <a href={e.instagram} target="_blank" rel="noreferrer" style={{
-                    background: SOCIAL_COLORS.instagram, color: "#fff", borderRadius: 20,
-                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
-                  }}>Instagram</a>
-                )}
-                {e.address && (
-                  <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{e.address}</span>
-                )}
-              </div>
-            )}
             {e.type !== "club" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {deadlines.length === 0
@@ -1218,7 +1281,14 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
-        {view === "detail" && selectedWeekend
+        {view === "detail" && selectedWeekend && selectedWeekend.type === "north"
+          ? <NorthRegionDetail
+              event={selectedWeekend}
+              onBack={() => { setView("dashboard"); setSelectedWeekend(null); }}
+              myRounds={myRounds}
+              toggleMyRound={toggleMyRound}
+            />
+          : view === "detail" && selectedWeekend
           ? <EventDetail
               weekend={selectedWeekend}
               checklist={checklist}

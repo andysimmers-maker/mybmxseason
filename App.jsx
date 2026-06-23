@@ -163,7 +163,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
   const nextEvent = myEventsList[0];
   const myDeadlines = [];
   myEventsList.forEach(e => {
-    eventDeadlines(e, bookings).forEach(d => { if (daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
+    eventDeadlines(e, bookings).forEach(d => { if (!d.done || daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
   });
   myDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -244,16 +244,17 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
                 : "CLUB";
               const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
               return (
-                <div key={e.key} onClick={() => onSelectWeekend(e)} style={{
+                <button type="button" key={e.key} onClick={() => onSelectWeekend(e)} style={{
                   background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
                   borderRadius: 8, padding: "8px 14px", cursor: "pointer", textAlign: "center",
+                  font: "inherit", color: "inherit",
                 }}>
                   <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>{badge}</div>
                   <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{title}</div>
                   <div style={{ fontSize: 11, color: days <= 14 ? COLORS.red : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
                     {days === 0 ? "Today" : `${days}d`}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -276,7 +277,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
                     const color = days <= 7 ? COLORS.red : COLORS.textSecondary;
                     return (
                       <div style={{ fontSize: 12, fontWeight: 700, color, flexShrink: 0 }}>
-                        {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
+                        {days < 0 ? "Overdue" : days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
                       </div>
                     );
                   })()}
@@ -339,7 +340,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
       label: weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day",
       date,
     })),
-    { key: "practice", label: "Practice Day", date: weekend.practiceDate },
+    { key: "practice", label: "Practice Day", date: weekend.practiceDate, done: !!bookings.practice },
     { key: "entry_open", label: "Entries Open", date: weekend.entryOpen },
     { key: "entry_close", label: "Entries Close", date: weekend.entryClose, done: !!bookings.entry },
     { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
@@ -434,7 +435,16 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               const showForm = isChecked && item.hasDetails;
               return (
                 <div key={item.key} style={{ borderBottom: `1px solid ${COLORS.border}`, paddingBottom: 12, marginBottom: 12 }}>
-                  <div onClick={() => updateBooking(item.key, !isChecked)} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                  <button
+                    type="button"
+                    onClick={() => updateBooking(item.key, !isChecked)}
+                    aria-pressed={isChecked}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+                      width: "100%", textAlign: "left", background: "none", border: "none",
+                      padding: 0, font: "inherit", color: "inherit",
+                    }}
+                  >
                     <div style={{
                       width: 20, height: 20, borderRadius: 5, flexShrink: 0,
                       border: `2px solid ${isChecked ? COLORS.green : COLORS.border}`,
@@ -454,7 +464,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                         {details.name ? "Edit details" : "Add details"}
                       </span>
                     )}
-                  </div>
+                  </button>
                   {showForm && (
                     <div style={{ marginTop: 12, paddingLeft: 32, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
                       {[
@@ -652,10 +662,19 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               {cat}
             </div>
             {DEFAULT_CHECKLIST.filter(i => i.category === cat).map(item => (
-              <div key={item.id} onClick={() => onToggle(weekend.weekendId, item.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "9px 0",
-                borderBottom: `1px solid ${COLORS.border}`, cursor: "pointer",
-              }}>
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => onToggle(weekend.weekendId, item.id)}
+                aria-pressed={!!checked[item.id]}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "9px 0",
+                  borderTop: "none", borderLeft: "none", borderRight: "none",
+                  borderBottom: `1px solid ${COLORS.border}`, cursor: "pointer",
+                  width: "100%", textAlign: "left", background: "none",
+                  font: "inherit", color: "inherit",
+                }}
+              >
                 <div style={{
                   width: 20, height: 20, borderRadius: 5, flexShrink: 0,
                   border: `2px solid ${checked[item.id] ? COLORS.green : COLORS.border}`,
@@ -671,7 +690,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                 }}>
                   {item.label}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         ))}
@@ -992,6 +1011,7 @@ export default function App() {
   const [myRounds, setMyRounds] = useState(new Set());
   const [bookings, setBookings] = useState({});
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1010,35 +1030,42 @@ export default function App() {
   }, []);
 
   async function loadUserData(userId) {
-    const [roundsRes, bookingsRes, checklistRes, settingsRes] = await Promise.all([
-      supabase.from("user_rounds").select("weekend_id").eq("user_id", userId),
-      supabase.from("user_bookings").select("weekend_id, data").eq("user_id", userId),
-      supabase.from("user_checklist").select("weekend_id, data").eq("user_id", userId),
-      supabase.from("user_settings").select("email_notifications").eq("user_id", userId).maybeSingle(),
-    ]);
-    if (roundsRes.data) setMyRounds(new Set(roundsRes.data.map(r => r.weekend_id)));
-    if (bookingsRes.data) {
-      const b = {};
-      bookingsRes.data.forEach(row => { b[row.weekend_id] = row.data; });
-      setBookings(b);
+    try {
+      const [roundsRes, bookingsRes, checklistRes, settingsRes] = await Promise.all([
+        supabase.from("user_rounds").select("weekend_id").eq("user_id", userId),
+        supabase.from("user_bookings").select("weekend_id, data").eq("user_id", userId),
+        supabase.from("user_checklist").select("weekend_id, data").eq("user_id", userId),
+        supabase.from("user_settings").select("email_notifications").eq("user_id", userId).maybeSingle(),
+      ]);
+      const firstError = [roundsRes, bookingsRes, checklistRes, settingsRes].find(r => r.error)?.error;
+      if (firstError) throw firstError;
+      if (roundsRes.data) setMyRounds(new Set(roundsRes.data.map(r => r.weekend_id)));
+      if (bookingsRes.data) {
+        const b = {};
+        bookingsRes.data.forEach(row => { b[row.weekend_id] = row.data; });
+        setBookings(b);
+      }
+      if (checklistRes.data) {
+        const c = {};
+        checklistRes.data.forEach(row => { c[row.weekend_id] = row.data; });
+        setChecklist(c);
+      }
+      setNotificationsEnabled(!!settingsRes.data?.email_notifications);
+    } catch (err) {
+      setSaveError("Couldn't load your season data — try refreshing the page.");
     }
-    if (checklistRes.data) {
-      const c = {};
-      checklistRes.data.forEach(row => { c[row.weekend_id] = row.data; });
-      setChecklist(c);
-    }
-    setNotificationsEnabled(!!settingsRes.data?.email_notifications);
   }
 
   function toggleNotifications() {
-    setNotificationsEnabled(prev => {
-      const next = !prev;
-      supabase.from("user_settings").upsert(
-        { user_id: session.user.id, email: session.user.email, email_notifications: next, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" }
-      ).then();
-      return next;
-    });
+    const previous = notificationsEnabled;
+    const next = !previous;
+    setNotificationsEnabled(next);
+    supabase.from("user_settings").upsert(
+      { user_id: session.user.id, email: session.user.email, email_notifications: next, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    ).then(({ error }) => {
+      if (error) { setNotificationsEnabled(previous); setSaveError("Couldn't save that change — check your connection and try again."); }
+    }).catch(() => { setNotificationsEnabled(previous); setSaveError("Couldn't save that change — check your connection and try again."); });
   }
 
   async function signOut() {
@@ -1046,30 +1073,38 @@ export default function App() {
   }
 
   function toggleMyRound(weekendId) {
+    const wasMine = myRounds.has(weekendId);
     setMyRounds(prev => {
       const next = new Set(prev);
-      if (next.has(weekendId)) {
-        next.delete(weekendId);
-        supabase.from("user_rounds").delete()
-          .eq("user_id", session.user.id).eq("weekend_id", weekendId).then();
-      } else {
-        next.add(weekendId);
-        supabase.from("user_rounds").insert({ user_id: session.user.id, weekend_id: weekendId }).then();
-      }
+      if (wasMine) next.delete(weekendId); else next.add(weekendId);
       return next;
     });
+    const revert = () => {
+      setMyRounds(prev => {
+        const next = new Set(prev);
+        if (wasMine) next.add(weekendId); else next.delete(weekendId);
+        return next;
+      });
+      setSaveError("Couldn't save that change — check your connection and try again.");
+    };
+    const op = wasMine
+      ? supabase.from("user_rounds").delete().eq("user_id", session.user.id).eq("weekend_id", weekendId)
+      : supabase.from("user_rounds").insert({ user_id: session.user.id, weekend_id: weekendId });
+    op.then(({ error }) => { if (error) revert(); }).catch(revert);
   }
 
   function updateBooking(weekendId, key, value) {
-    setBookings(prev => {
-      const updated = { ...(prev[weekendId] || {}), [key]: value };
-      const next = { ...prev, [weekendId]: updated };
-      supabase.from("user_bookings").upsert(
-        { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,weekend_id" }
-      ).then();
-      return next;
-    });
+    const previous = bookings[weekendId] || {};
+    const updated = { ...previous, [key]: value };
+    setBookings(prev => ({ ...prev, [weekendId]: updated }));
+    const revert = () => {
+      setBookings(prev => ({ ...prev, [weekendId]: previous }));
+      setSaveError("Couldn't save that change — check your connection and try again.");
+    };
+    supabase.from("user_bookings").upsert(
+      { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,weekend_id" }
+    ).then(({ error }) => { if (error) revert(); }).catch(revert);
   }
 
   function handleSelectWeekend(weekend) {
@@ -1078,15 +1113,17 @@ export default function App() {
   }
 
   function handleToggle(weekendId, itemId) {
-    setChecklist(prev => {
-      const updated = { ...(prev[weekendId] || {}), [itemId]: !(prev[weekendId]?.[itemId]) };
-      const next = { ...prev, [weekendId]: updated };
-      supabase.from("user_checklist").upsert(
-        { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,weekend_id" }
-      ).then();
-      return next;
-    });
+    const previous = checklist[weekendId] || {};
+    const updated = { ...previous, [itemId]: !previous[itemId] };
+    setChecklist(prev => ({ ...prev, [weekendId]: updated }));
+    const revert = () => {
+      setChecklist(prev => ({ ...prev, [weekendId]: previous }));
+      setSaveError("Couldn't save that change — check your connection and try again.");
+    };
+    supabase.from("user_checklist").upsert(
+      { user_id: session.user.id, weekend_id: weekendId, data: updated, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,weekend_id" }
+    ).then(({ error }) => { if (error) revert(); }).catch(revert);
   }
 
   const navItems = [
@@ -1168,6 +1205,19 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {saveError && (
+        <div style={{
+          background: `${COLORS.red}1a`, borderBottom: `1px solid ${COLORS.red}55`,
+          color: COLORS.red, padding: "10px 24px", fontSize: 13,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <span>{saveError}</span>
+          <button type="button" onClick={() => setSaveError(null)} aria-label="Dismiss" style={{
+            background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0,
+          }}>×</button>
+        </div>
+      )}
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
         {view === "detail" && selectedWeekend && selectedWeekend.type === "north"

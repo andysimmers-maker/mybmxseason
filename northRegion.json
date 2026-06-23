@@ -7,5 +7,5 @@
   { "id": 6, "round": 6, "name": "Round 6", "date": "2026-06-21", "venue": "Mid Lancs BMX", "location": "Chorley/Coppull", "status": "confirmed" },
   { "id": 7, "round": 7, "name": "Round 7", "date": "2026-07-12", "venue": "Bradford Bandits BMX Racing Club", "location": null, "status": "confirmed" },
   { "id": 8, "round": 8, "name": "Round 8", "date": "2026-07-19", "venue": "Blackpool BMX Club", "location": null, "status": "confirmed" },
-  { "id": 9, "round": null, "name": "Club Champs", "date": "2026-09-13", "venue": "Preston Pirates", "location": null, "status": "tbc" }
+  { "id": 9, "round": null, "name": "Club Champs", "date": "2026-09-13", "venue": "Preston Pirates", "location": null, "status": "confirmed" }
 ]

@@ -267,7 +267,6 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 4);
 
-  const myWeekendsList = WEEKENDS.filter(w => myRounds.has(w.weekendId) && new Date(w.dates[0]) >= now);
   const myEventsList = ALL_EVENTS.filter(e => myRounds.has(e.key) && new Date(eventEndDate(e)) >= now);
   const myDeadlines = [];
   myEventsList.forEach(e => {
@@ -322,24 +321,29 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
         </div>
       )}
 
-      {myWeekendsList.length > 0 && (
+      {myEventsList.length > 0 && (
         <div style={{
           background: `${COLORS.blue}0d`, border: `1px solid ${COLORS.blue}44`,
           borderRadius: 12, padding: 20, marginBottom: 16,
         }}>
           <div style={{ fontSize: 12, color: COLORS.blue, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
-            My Season — {myWeekendsList.length} weekend{myWeekendsList.length > 1 ? "s" : ""}
+            My Season — {myEventsList.length} event{myEventsList.length > 1 ? "s" : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: myDeadlines.length > 0 ? 14 : 0 }}>
-            {myWeekendsList.map(w => {
-              const days = daysUntil(w.dates[0]);
+            {[...myEventsList].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b))).map(e => {
+              const days = daysUntil(eventDate(e));
+              const badge = e.type === "national" ? `R${e.roundNumbers.join("&")}`
+                : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
+                : "CLUB";
+              const title = e.type === "national" ? e.city : e.type === "north" ? e.venue : e.club;
+              const clickable = e.type === "national";
               return (
-                <div key={w.weekendId} onClick={() => onSelectWeekend(w)} style={{
+                <div key={e.key} onClick={clickable ? () => onSelectWeekend(e) : undefined} style={{
                   background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
-                  borderRadius: 8, padding: "8px 14px", cursor: "pointer", textAlign: "center",
+                  borderRadius: 8, padding: "8px 14px", cursor: clickable ? "pointer" : "default", textAlign: "center",
                 }}>
-                  <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>R{w.roundNumbers.join("&")}</div>
-                  <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{w.city}</div>
+                  <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>{badge}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{title}</div>
                   <div style={{ fontSize: 11, color: days <= 14 ? COLORS.red : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
                     {days === 0 ? "Today" : `${days}d`}
                   </div>

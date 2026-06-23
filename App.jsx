@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import SEASON_DATA from "./seasons.json";
-import NORTH_REGION_DATA from "./northRegion.json";
-import CLUB_RACES_DATA from "./clubRaces.json";
 import COACHING_DATA from "./coaching.json";
 import ACCOMMODATION_DATA from "./accommodation.json";
 import { supabase } from "./supabase";
+import {
+  WEEKENDS, ALL_EVENTS, EVENT_TYPE_LABELS,
+  formatDate, daysUntil, dayBefore,
+  eventDate, eventEndDate, eventLabel, eventDeadlines,
+  eventHeroTitle, eventHeroSubtitle, eventHeroEyebrow, eventHeroTiles,
+} from "./events.js";
 
 const COLORS = {
   bg: "#0d0d0d",
@@ -19,29 +22,6 @@ const COLORS = {
   textSecondary: "#9a9a9a",
   textMuted: "#6b6b6b",
 };
-
-const WEEKENDS = (() => {
-  const map = new Map();
-  SEASON_DATA.forEach(r => {
-    if (!map.has(r.weekend)) map.set(r.weekend, []);
-    map.get(r.weekend).push(r);
-  });
-  return Array.from(map.values()).map(rounds => ({
-    ...rounds[0],
-    weekendId: rounds[0].weekend,
-    rounds,
-    roundNumbers: rounds.map(r => r.round),
-    dates: rounds.map(r => r.date),
-    isNatChamps: rounds.some(r => r.isNatChamps),
-  }));
-})();
-
-const NATIONAL = WEEKENDS.map(w => ({ ...w, type: "national", key: w.weekendId }));
-const NORTH_REGION = NORTH_REGION_DATA.map(r => ({ ...r, type: "north", key: `north-${r.id}` }));
-const CLUB_RACES = CLUB_RACES_DATA.map(r => ({ ...r, type: "club", key: `club-${r.id}` }));
-const ALL_EVENTS = [...NATIONAL, ...NORTH_REGION, ...CLUB_RACES];
-
-const EVENT_TYPE_LABELS = { national: "National", north: "North Region", club: "Club" };
 
 const DEFAULT_CHECKLIST = [
   { id: "bike", label: "Bike checked and race-ready", category: "bike" },
@@ -75,93 +55,6 @@ const CATEGORY_COLORS = {
   race: COLORS.blue,
   travel: COLORS.blue,
 };
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function daysUntil(dateStr) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const target = new Date(year, month - 1, day);
-  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-}
-
-function dayBefore(dateStr) {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const d = new Date(year, month - 1, day);
-  d.setDate(d.getDate() - 1);
-  const pad = n => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function eventDate(e) {
-  return e.type === "national" ? e.dates[0] : e.date;
-}
-
-function eventEndDate(e) {
-  return e.type === "national" ? e.dates[e.dates.length - 1] : e.date;
-}
-
-function eventLabel(e) {
-  if (e.type === "national") return e.city;
-  if (e.type === "north") return e.location;
-  return e.club;
-}
-
-function eventDeadlines(e, bookings) {
-  if (e.type === "national") {
-    const b = (bookings && bookings[e.weekendId]) || {};
-    return [
-      e.entryClose && { label: `${e.city} entries close`, date: e.entryClose, done: !!b.entry },
-      e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen, done: !!b.parking },
-      e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen },
-      e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen, done: !!b.gazebo },
-    ].filter(Boolean);
-  }
-  if (e.type === "north") {
-    if (e.status === "tbc") return [];
-    return [{ label: `${e.location} registration closes (11:45am)`, date: dayBefore(e.date) }];
-  }
-  if (e.type === "club") {
-    return [{ label: `${e.club} race day`, date: e.date }];
-  }
-  return [];
-}
-
-function eventHeroTitle(e) {
-  if (e.type === "national") return e.venue;
-  if (e.type === "north") return e.location;
-  return e.club;
-}
-
-function eventHeroSubtitle(e) {
-  if (e.type === "national") return `${e.dates.map(formatDate).join(" · ")} · ${e.city}`;
-  if (e.type === "north") return `${e.name} · ${e.venue} · ${formatDate(e.date)}`;
-  return `${e.series} R${e.round} · ${formatDate(e.date)}`;
-}
-
-function eventHeroEyebrow(e) {
-  if (e.type === "national") return `Rounds ${e.roundNumbers.join(" & ")}`;
-  return EVENT_TYPE_LABELS[e.type];
-}
-
-function eventHeroTiles(e) {
-  if (e.type === "national") {
-    return [
-      { label: "Practice", date: e.practiceDate },
-      { label: "Day 1", date: e.dates[0] },
-      { label: "Day 2", date: e.dates[1] },
-      { label: "Entries close", date: e.entryClose },
-    ].filter(t => t.date);
-  }
-  if (e.type === "north") {
-    return [...eventDeadlines(e), { label: "Race day", date: e.date }];
-  }
-  return [{ label: "Race day", date: e.date }];
-}
 
 function CoachingView() {
   const [filterCoach, setFilterCoach] = useState("All");
@@ -1099,6 +992,7 @@ export default function App() {
   const [checklist, setChecklist] = useState({});
   const [myRounds, setMyRounds] = useState(new Set());
   const [bookings, setBookings] = useState({});
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1110,17 +1004,18 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) loadUserData(session.user.id);
-      else { setMyRounds(new Set()); setBookings({}); setChecklist({}); }
+      else { setMyRounds(new Set()); setBookings({}); setChecklist({}); setNotificationsEnabled(false); }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   async function loadUserData(userId) {
-    const [roundsRes, bookingsRes, checklistRes] = await Promise.all([
+    const [roundsRes, bookingsRes, checklistRes, settingsRes] = await Promise.all([
       supabase.from("user_rounds").select("weekend_id").eq("user_id", userId),
       supabase.from("user_bookings").select("weekend_id, data").eq("user_id", userId),
       supabase.from("user_checklist").select("weekend_id, data").eq("user_id", userId),
+      supabase.from("user_settings").select("email_notifications").eq("user_id", userId).maybeSingle(),
     ]);
     if (roundsRes.data) setMyRounds(new Set(roundsRes.data.map(r => r.weekend_id)));
     if (bookingsRes.data) {
@@ -1133,6 +1028,18 @@ export default function App() {
       checklistRes.data.forEach(row => { c[row.weekend_id] = row.data; });
       setChecklist(c);
     }
+    setNotificationsEnabled(!!settingsRes.data?.email_notifications);
+  }
+
+  function toggleNotifications() {
+    setNotificationsEnabled(prev => {
+      const next = !prev;
+      supabase.from("user_settings").upsert(
+        { user_id: session.user.id, email: session.user.email, email_notifications: next, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      ).then();
+      return next;
+    });
   }
 
   async function sendMagicLink(e) {
@@ -1288,6 +1195,14 @@ export default function App() {
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 12, borderLeft: `1px solid ${COLORS.border}` }}>
+            <button onClick={toggleNotifications} title="Email reminders the day before a deadline or race" style={{
+              background: notificationsEnabled ? `${COLORS.blue}22` : "none",
+              border: `1px solid ${notificationsEnabled ? COLORS.blue : COLORS.border}`,
+              color: notificationsEnabled ? COLORS.blue : COLORS.textMuted,
+              borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600,
+            }}>
+              🔔 Reminders {notificationsEnabled ? "On" : "Off"}
+            </button>
             <span style={{ fontSize: 12, color: COLORS.textMuted }}>{session.user.email}</span>
             <button onClick={signOut} style={{
               background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textMuted,

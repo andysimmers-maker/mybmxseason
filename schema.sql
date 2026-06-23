@@ -28,3 +28,12 @@ create table user_checklist (
 );
 alter table user_checklist enable row level security;
 create policy "own rows" on user_checklist for all using (auth.uid() = user_id);
+
+create table user_settings (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  email text,
+  email_notifications boolean not null default false,
+  updated_at timestamptz default now()
+);
+alter table user_settings enable row level security;
+create policy "own rows" on user_settings for all using (auth.uid() = user_id);

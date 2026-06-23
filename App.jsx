@@ -21,6 +21,7 @@ const COLORS = {
 };
 
 const PLATFORM_COLORS = { "Spond": "#00b894", "Website": COLORS.blue };
+const SOCIAL_COLORS = { website: COLORS.blue, facebook: "#1877F2", instagram: "#E1306C" };
 
 const WEEKENDS = (() => {
   const map = new Map();
@@ -109,7 +110,7 @@ function eventEndDate(e) {
 
 function eventLabel(e) {
   if (e.type === "national") return e.city;
-  if (e.type === "north") return e.venue;
+  if (e.type === "north") return e.location;
   return e.club;
 }
 
@@ -124,7 +125,7 @@ function eventDeadlines(e) {
   }
   if (e.type === "north") {
     if (e.status === "tbc") return [];
-    return [{ label: `${e.venue} registration closes (11:45am)`, date: dayBefore(e.date) }];
+    return [{ label: `${e.location} registration closes (11:45am)`, date: dayBefore(e.date) }];
   }
   if (e.type === "club") {
     return [{ label: `${e.club} race day`, date: e.date }];
@@ -335,7 +336,7 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
               const badge = e.type === "national" ? `R${e.roundNumbers.join("&")}`
                 : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
                 : "CLUB";
-              const title = e.type === "national" ? e.city : e.type === "north" ? e.venue : e.club;
+              const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
               const clickable = e.type === "national";
               return (
                 <div key={e.key} onClick={clickable ? () => onSelectWeekend(e) : undefined} style={{
@@ -403,11 +404,11 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
             const badge = e.type === "national" ? e.roundNumbers.join("·")
               : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
               : "CLUB";
-            const title = e.type === "national" ? e.city : e.type === "north" ? e.venue : e.club;
+            const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
             const subtitle = e.type === "national"
               ? `${formatDate(e.dates[0])} – ${formatDate(e.dates[e.dates.length - 1])}`
               : e.type === "north"
-              ? `${e.name}${isTbc ? " (TBC)" : ""} · ${formatDate(e.date)}`
+              ? `${e.name} · ${e.venue}${isTbc ? " (TBC)" : ""} · ${formatDate(e.date)}`
               : `${e.series} R${e.round} · ${formatDate(e.date)}`;
             return (
               <div key={e.key} style={{
@@ -886,9 +887,10 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
           : eventDeadlines(e);
 
         const title = e.type === "national" ? `${e.venue} — ${e.city}`
-          : e.type === "north" ? `${e.name} — ${e.venue}${e.location ? `, ${e.location}` : ""}`
+          : e.type === "north" ? e.location
           : `${e.club} — ${e.series} R${e.round}`;
         const eyebrow = e.type === "national" ? `Rounds ${e.roundNumbers.join(" & ")}`
+          : e.type === "north" ? `North Region · ${e.name}`
           : EVENT_TYPE_LABELS[e.type];
 
         return (
@@ -922,6 +924,9 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                     }}>Date TBC</div>
                   )}
                 </div>
+                {e.type === "north" && (
+                  <div style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 2 }}>{e.name} · {e.venue}</div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 {!past && (
@@ -944,6 +949,31 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                 )}
               </div>
             </div>
+            {e.type === "north" && (e.website || e.facebook || e.instagram || e.address) && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                {e.website && (
+                  <a href={e.website} target="_blank" rel="noreferrer" style={{
+                    background: SOCIAL_COLORS.website, color: "#fff", borderRadius: 20,
+                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
+                  }}>Website</a>
+                )}
+                {e.facebook && (
+                  <a href={e.facebook} target="_blank" rel="noreferrer" style={{
+                    background: SOCIAL_COLORS.facebook, color: "#fff", borderRadius: 20,
+                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
+                  }}>Facebook</a>
+                )}
+                {e.instagram && (
+                  <a href={e.instagram} target="_blank" rel="noreferrer" style={{
+                    background: SOCIAL_COLORS.instagram, color: "#fff", borderRadius: 20,
+                    padding: "4px 12px", fontSize: 11, fontWeight: 600, textDecoration: "none",
+                  }}>Instagram</a>
+                )}
+                {e.address && (
+                  <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{e.address}</span>
+                )}
+              </div>
+            )}
             {e.type !== "club" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {deadlines.length === 0

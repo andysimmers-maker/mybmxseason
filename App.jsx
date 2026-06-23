@@ -558,7 +558,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                     )}
                   </div>
                   {showForm && (
-                    <div style={{ marginTop: 12, paddingLeft: 32, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ marginTop: 12, paddingLeft: 32, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
                       {[
                         { key: "name", label: "Hotel / campsite name", full: true },
                         { key: "address", label: "Address / postcode", full: true },
@@ -609,7 +609,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
         })}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
           <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Gazebo / Team Area</div>
           {weekend.gazeboBookingOpen && (

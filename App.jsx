@@ -16,11 +16,9 @@ const COLORS = {
   yellow: "#f5a623",
   green: "#2ecc71",
   textPrimary: "#f0f0f0",
-  textSecondary: "#888",
-  textMuted: "#555",
+  textSecondary: "#9a9a9a",
+  textMuted: "#6b6b6b",
 };
-
-const PLATFORM_COLORS = { "Spond": "#00b894", "Website": COLORS.blue };
 
 const WEEKENDS = (() => {
   const map = new Map();
@@ -71,11 +69,11 @@ const DEFAULT_CHECKLIST = [
 const CATEGORY_COLORS = {
   bike: COLORS.blue,
   safety: COLORS.red,
-  kit: "#9b59b6",
-  admin: COLORS.yellow,
-  equipment: "#1abc9c",
-  race: COLORS.green,
-  travel: "#e67e22",
+  kit: COLORS.blue,
+  admin: COLORS.blue,
+  equipment: COLORS.blue,
+  race: COLORS.blue,
+  travel: COLORS.blue,
 };
 
 function formatDate(dateStr) {
@@ -132,26 +130,36 @@ function eventDeadlines(e) {
   return [];
 }
 
-function DeadlinePill({ label, date }) {
-  const days = daysUntil(date);
-  if (days < 0) return null;
-  const color = days <= 7 ? COLORS.red : days <= 21 ? COLORS.yellow : COLORS.green;
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "8px 14px",
-      background: `${color}18`, border: `1px solid ${color}44`,
-      borderRadius: 8, marginBottom: 8,
-    }}>
-      <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{formatDate(date)}</div>
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 700, color, background: `${color}22`, padding: "3px 10px", borderRadius: 20 }}>
-        {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
-      </div>
-    </div>
-  );
+function eventHeroTitle(e) {
+  if (e.type === "national") return e.venue;
+  if (e.type === "north") return e.location;
+  return e.club;
+}
+
+function eventHeroSubtitle(e) {
+  if (e.type === "national") return `${e.dates.map(formatDate).join(" · ")} · ${e.city}`;
+  if (e.type === "north") return `${e.name} · ${e.venue} · ${formatDate(e.date)}`;
+  return `${e.series} R${e.round} · ${formatDate(e.date)}`;
+}
+
+function eventHeroEyebrow(e) {
+  if (e.type === "national") return `Rounds ${e.roundNumbers.join(" & ")}`;
+  return EVENT_TYPE_LABELS[e.type];
+}
+
+function eventHeroTiles(e) {
+  if (e.type === "national") {
+    return [
+      { label: "Practice", date: e.practiceDate },
+      { label: "Day 1", date: e.dates[0] },
+      { label: "Day 2", date: e.dates[1] },
+      { label: "Entries close", date: e.entryClose },
+    ].filter(t => t.date);
+  }
+  if (e.type === "north") {
+    return [...eventDeadlines(e), { label: "Race day", date: e.date }];
+  }
+  return [{ label: "Race day", date: e.date }];
 }
 
 function CoachingView() {
@@ -205,11 +213,11 @@ function CoachingView() {
           {sessions.map(s => {
             const past = new Date(`${s.date}T${s.time}`) < now;
             const days = daysUntil(s.date);
-            const platformColor = PLATFORM_COLORS[s.bookingPlatform] || COLORS.blue;
+            const platformColor = COLORS.blue;
             return (
               <div key={s.id} style={{
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                borderLeft: `4px solid ${past ? COLORS.textMuted : "#9b59b6"}`,
+                borderLeft: `4px solid ${past ? COLORS.textMuted : COLORS.blue}`,
                 borderRadius: 10, padding: 16, marginBottom: 10, opacity: past ? 0.5 : 1,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
@@ -226,7 +234,7 @@ function CoachingView() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                     {!past && days >= 0 && (
-                      <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.yellow }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary }}>
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
                       </div>
                     )}
@@ -248,26 +256,17 @@ function CoachingView() {
   );
 }
 
-function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
+function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound }) {
   const now = new Date();
-  const upcomingWeekends = WEEKENDS.filter(w => new Date(w.dates[w.dates.length - 1]) >= now);
-  const nextWeekend = upcomingWeekends[0];
-
-  const allDeadlines = [];
-  ALL_EVENTS.forEach(e => {
-    if (new Date(eventEndDate(e)) >= now) {
-      eventDeadlines(e).forEach(d => { if (daysUntil(d.date) >= 0) allDeadlines.push(d); });
-    }
-  });
-  allDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
-  const soonDeadlines = allDeadlines.slice(0, 5);
 
   const upcomingCoaching = COACHING_DATA
     .filter(s => daysUntil(s.date) >= 0)
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 4);
 
-  const myEventsList = ALL_EVENTS.filter(e => myRounds.has(e.key) && new Date(eventEndDate(e)) >= now);
+  const myEventsList = [...ALL_EVENTS.filter(e => myRounds.has(e.key) && new Date(eventEndDate(e)) >= now)]
+    .sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b)));
+  const nextEvent = myEventsList[0];
   const myDeadlines = [];
   myEventsList.forEach(e => {
     eventDeadlines(e).forEach(d => { if (daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
@@ -276,28 +275,42 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
 
   return (
     <div>
-      {nextWeekend && (
+      {myEventsList.length === 0 ? (
+        <div style={{
+          background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12,
+          padding: 32, textAlign: "center", marginBottom: 24,
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🏁</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 8 }}>No races added yet</div>
+          <div style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 20 }}>
+            Mark races "Going" from the Calendar to build your season and see your deadlines here.
+          </div>
+          <button onClick={onGoToCalendar} style={{
+            background: COLORS.red, color: "#fff", border: "none",
+            borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 13, fontWeight: 600,
+          }}>
+            Browse Calendar →
+          </button>
+        </div>
+      ) : (
+        <>
+      {nextEvent && (
         <div style={{
           background: `linear-gradient(135deg, ${COLORS.red}22, ${COLORS.blue}22)`,
           border: `1px solid ${COLORS.border}`,
           borderRadius: 12, padding: 24, marginBottom: 24,
         }}>
           <div style={{ fontSize: 11, letterSpacing: 2, color: COLORS.red, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase" }}>
-            Next Weekend
+            Next Up · {eventHeroEyebrow(nextEvent)}
           </div>
           <div style={{ fontSize: 28, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary, marginBottom: 4 }}>
-            Rounds {nextWeekend.roundNumbers.join(" & ")} — {nextWeekend.venue}
+            {eventHeroTitle(nextEvent)}
           </div>
           <div style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 16 }}>
-            {nextWeekend.dates.map(formatDate).join(" · ")} · {nextWeekend.city}
+            {eventHeroSubtitle(nextEvent)}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {[
-              { label: "Practice", date: nextWeekend.practiceDate },
-              { label: "Day 1", date: nextWeekend.dates[0] },
-              { label: "Day 2", date: nextWeekend.dates[1] },
-              { label: "Entries close", date: nextWeekend.entryClose },
-            ].filter(item => item.date).map(item => {
+            {eventHeroTiles(nextEvent).map(item => {
               const d = daysUntil(item.date);
               return (
                 <div key={item.label} style={{
@@ -312,11 +325,11 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
               );
             })}
           </div>
-          <button onClick={() => onSelectWeekend(nextWeekend)} style={{
+          <button onClick={() => onSelectWeekend(nextEvent)} style={{
             marginTop: 16, background: COLORS.red, color: "#fff", border: "none",
             borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontSize: 13, fontWeight: 600,
           }}>
-            View Weekend Details →
+            View Details →
           </button>
         </div>
       )}
@@ -330,7 +343,7 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
             My Season — {myEventsList.length} event{myEventsList.length > 1 ? "s" : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: myDeadlines.length > 0 ? 14 : 0 }}>
-            {[...myEventsList].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b))).map(e => {
+            {myEventsList.map(e => {
               const days = daysUntil(eventDate(e));
               const badge = e.type === "national" ? `R${e.roundNumbers.join("&")}`
                 : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
@@ -364,7 +377,7 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
                   </div>
                   {(() => {
                     const days = daysUntil(d.date);
-                    const color = days <= 7 ? COLORS.red : days <= 21 ? COLORS.yellow : COLORS.green;
+                    const color = days <= 7 ? COLORS.red : COLORS.textSecondary;
                     return (
                       <div style={{ fontSize: 12, fontWeight: 700, color, flexShrink: 0 }}>
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
@@ -377,76 +390,8 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
           )}
         </div>
       )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
-          <div style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
-            Upcoming Deadlines
-          </div>
-          {soonDeadlines.length === 0
-            ? <div style={{ color: COLORS.textMuted, fontSize: 13 }}>No upcoming deadlines</div>
-            : soonDeadlines.map((d, i) => <DeadlinePill key={i} label={d.label} date={d.date} />)
-          }
-        </div>
-
-        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
-          <div style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
-            Season Overview
-          </div>
-          {[...ALL_EVENTS].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b))).map(e => {
-            const past = new Date(eventEndDate(e)) < now;
-            const isNext = nextWeekend && e.type === "national" && e.weekendId === nextWeekend.weekendId;
-            const isMine = myRounds.has(e.key);
-            const isTbc = e.type === "north" && e.status === "tbc";
-            const badge = e.type === "national" ? e.roundNumbers.join("·")
-              : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
-              : "CLUB";
-            const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
-            const subtitle = e.type === "national"
-              ? `${formatDate(e.dates[0])} – ${formatDate(e.dates[e.dates.length - 1])}`
-              : e.type === "north"
-              ? `${e.name} · ${e.venue}${isTbc ? " (TBC)" : ""} · ${formatDate(e.date)}`
-              : `${e.series} R${e.round} · ${formatDate(e.date)}`;
-            return (
-              <div key={e.key} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
-                borderBottom: `1px solid ${COLORS.border}`,
-                background: isMine ? `${COLORS.blue}0a` : "transparent",
-                borderLeft: isMine ? `3px solid ${COLORS.blue}` : "3px solid transparent",
-                paddingLeft: isMine ? 8 : 0,
-                opacity: past ? 0.45 : 1,
-                transition: "all 0.15s",
-              }}>
-                <div onClick={() => onSelectWeekend(e)} style={{
-                  height: 28, borderRadius: 14, cursor: "pointer",
-                  background: isMine ? COLORS.blue : isNext ? COLORS.red : isTbc || past ? COLORS.textMuted : COLORS.border,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, padding: "0 8px",
-                }}>
-                  {badge}
-                </div>
-                <div onClick={() => onSelectWeekend(e)} style={{ flex: 1, cursor: "pointer" }}>
-                  <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: isMine ? 600 : 500 }}>{title}</div>
-                  <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{subtitle}</div>
-                </div>
-                {isNext && !isMine && <div style={{ fontSize: 10, color: COLORS.red, fontWeight: 700, letterSpacing: 1 }}>NEXT</div>}
-                {past && <div style={{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 }}>DONE</div>}
-                {!past && (
-                  <button onClick={(ev) => { ev.stopPropagation(); toggleMyRound(e.key); }} style={{
-                    background: isMine ? `${COLORS.blue}22` : "none",
-                    border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
-                    color: isMine ? COLORS.blue : COLORS.textMuted,
-                    borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 10, fontWeight: 600,
-                    flexShrink: 0,
-                  }}>
-                    {isMine ? "✓ Going" : "+ Going"}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        </>
+      )}
 
       {upcomingCoaching.length > 0 && (
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginTop: 16 }}>
@@ -455,18 +400,18 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
           </div>
           {upcomingCoaching.map(s => {
             const days = daysUntil(s.date);
-            const platformColor = PLATFORM_COLORS[s.bookingPlatform] || COLORS.blue;
+            const platformColor = COLORS.blue;
             return (
               <div key={s.id} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
                 borderBottom: `1px solid ${COLORS.border}`,
               }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#9b59b6", flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.blue, flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: 600 }}>{s.coach}</div>
                   <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{s.venue.split(",")[0]} · {formatDate(s.date)} · {s.time}</div>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.yellow, marginRight: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary, marginRight: 8 }}>
                   {days === 0 ? "Today" : `${days}d`}
                 </div>
                 {s.groupCode && (
@@ -497,17 +442,16 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
       key: `race_${i}`,
       label: weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day",
       date,
-      color: COLORS.red,
     })),
-    { key: "practice", label: "Practice Day", date: weekend.practiceDate, color: COLORS.blue },
-    { key: "entry_open", label: "Entries Open", date: weekend.entryOpen, color: COLORS.green },
-    { key: "entry_close", label: "Entries Close", date: weekend.entryClose, color: COLORS.yellow },
-    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, color: "#e67e22" },
+    { key: "practice", label: "Practice Day", date: weekend.practiceDate },
+    { key: "entry_open", label: "Entries Open", date: weekend.entryOpen },
+    { key: "entry_close", label: "Entries Close", date: weekend.entryClose },
+    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen },
     ...(weekend.campingAvailable ? [
-      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen, color: "#1abc9c" },
+      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen },
     ] : []),
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
-      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, color: "#9b59b6" },
+      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen },
     ] : []),
   ];
 
@@ -556,7 +500,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               <a href={weekend.facebook} target="_blank" rel="noreferrer" style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#1877f2",
+                borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
                 textDecoration: "none", fontWeight: 500,
               }}>f Facebook</a>
             )}
@@ -660,7 +604,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
             <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
-              {d >= 0 && <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
@@ -673,9 +617,9 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
           {weekend.gazeboBookingOpen && (
             <div style={{
               display: "inline-block", fontSize: 11, fontWeight: 700, marginBottom: 10,
-              color: weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6",
-              background: weekend.gazeboBookingOpen === "TBC" ? `${COLORS.textMuted}18` : "#9b59b622",
-              border: `1px solid ${weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : "#9b59b6"}44`,
+              color: weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : COLORS.blue,
+              background: weekend.gazeboBookingOpen === "TBC" ? `${COLORS.textMuted}18` : `${COLORS.blue}22`,
+              border: `1px solid ${weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : COLORS.blue}44`,
               borderRadius: 20, padding: "3px 10px",
             }}>
               Booking opens: {weekend.gazeboBookingOpen === "TBC" ? "TBC" : formatDate(weekend.gazeboBookingOpen)}
@@ -694,8 +638,8 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
           </div>
         )}
         {weekend.campingInfo && (
-          <div style={{ background: COLORS.card, border: `1px solid #1abc9c44`, borderRadius: 10, padding: 18 }}>
-            <div style={{ fontSize: 12, color: "#1abc9c", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping Details</div>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 10, padding: 18 }}>
+            <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping Details</div>
             <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.campingInfo}</div>
           </div>
         )}
@@ -711,9 +655,9 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
         const sessions = COACHING_DATA.filter(s => weekend.rounds.some(r => s.roundIds.includes(r.id)));
         if (sessions.length === 0) return null;
         return (
-          <div style={{ background: COLORS.card, border: `1px solid #9b59b644`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
+          <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: "#9b59b6", textTransform: "uppercase", letterSpacing: 1 }}>Coaching Sessions</div>
+              <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1 }}>Coaching Sessions</div>
               <button onClick={onViewCoaching} style={{
                 background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary,
                 borderRadius: 8, padding: "4px 12px", cursor: "pointer", fontSize: 11,
@@ -722,19 +666,19 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
             {sessions.map(s => {
               const days = daysUntil(s.date);
               const past = days < 0;
-              const platformColor = PLATFORM_COLORS[s.bookingPlatform] || COLORS.blue;
+              const platformColor = COLORS.blue;
               return (
                 <div key={s.id} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
                   borderBottom: `1px solid ${COLORS.border}`, opacity: past ? 0.5 : 1,
                 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: past ? COLORS.textMuted : "#9b59b6", flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: past ? COLORS.textMuted : COLORS.blue, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{s.coach}</div>
                     <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{formatDate(s.date)} · {s.time} · {s.ageGroups}</div>
                   </div>
                   {!past && (
-                    <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.yellow, marginRight: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary, marginRight: 4 }}>
                       {days === 0 ? "Today" : `${days}d`}
                     </div>
                   )}
@@ -764,8 +708,8 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                   <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{a.name}</div>
                   <div style={{
                     fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-                    color: a.type === "Camping" ? "#1abc9c" : COLORS.blue,
-                    background: a.type === "Camping" ? "#1abc9c22" : `${COLORS.blue}22`,
+                    color: COLORS.blue,
+                    background: `${COLORS.blue}22`,
                     borderRadius: 10, padding: "2px 8px",
                   }}>{a.type}</div>
                 </div>
@@ -794,7 +738,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
           <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>
             Race Day Checklist
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: checkedCount === totalItems ? COLORS.green : COLORS.yellow }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: checkedCount === totalItems ? COLORS.green : COLORS.textSecondary }}>
             {checkedCount}/{totalItems}
           </div>
         </div>
@@ -844,8 +788,8 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
   const isTbc = event.status === "tbc";
 
   const sections = [
-    ...(isTbc ? [] : [{ key: "reg", label: "Registration closes (11:45am)", date: dayBefore(event.date), color: COLORS.yellow }]),
-    { key: "race", label: "Race day", date: event.date, color: COLORS.red },
+    ...(isTbc ? [] : [{ key: "reg", label: "Registration closes (11:45am)", date: dayBefore(event.date) }]),
+    { key: "race", label: "Race day", date: event.date },
   ];
 
   return (
@@ -889,7 +833,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
             <a href={event.facebook} target="_blank" rel="noreferrer" style={{
               display: "flex", alignItems: "center", gap: 6,
               background: COLORS.card, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#1877f2",
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
               textDecoration: "none", fontWeight: 500,
             }}>f Facebook</a>
           )}
@@ -897,7 +841,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
             <a href={event.instagram} target="_blank" rel="noreferrer" style={{
               display: "flex", alignItems: "center", gap: 6,
               background: COLORS.card, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#E1306C",
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
               textDecoration: "none", fontWeight: 500,
             }}>📷 Instagram</a>
           )}
@@ -921,7 +865,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
             <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
-              {d >= 0 && <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
@@ -965,7 +909,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
             <a href={event.facebook} target="_blank" rel="noreferrer" style={{
               display: "flex", alignItems: "center", gap: 6,
               background: COLORS.card, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#1877f2",
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
               textDecoration: "none", fontWeight: 500,
             }}>f Facebook</a>
           )}
@@ -973,7 +917,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
             <a href={event.instagram} target="_blank" rel="noreferrer" style={{
               display: "flex", alignItems: "center", gap: 6,
               background: COLORS.card, border: `1px solid ${COLORS.border}`,
-              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "#E1306C",
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
               textDecoration: "none", fontWeight: 500,
             }}>📷 Instagram</a>
           )}
@@ -1119,7 +1063,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                         <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
                         <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
                         {days >= 0 && days <= 30 && (
-                          <span style={{ color: COLORS.yellow, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
+                          <span style={{ color: days <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
                         )}
                       </div>
                     );
@@ -1376,7 +1320,7 @@ export default function App() {
           ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />
           : view === "coaching"
           ? <CoachingView />
-          : <Dashboard onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />
+          : <Dashboard onSelectWeekend={handleSelectWeekend} onGoToCalendar={() => setView("calendar")} myRounds={myRounds} toggleMyRound={toggleMyRound} />
         }
       </div>
     </div>

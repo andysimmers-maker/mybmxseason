@@ -24,8 +24,7 @@ async function sendEmail(env, to, subject, html) {
   return res.ok;
 }
 
-async function runDigest(env) {
-  const now = new Date();
+async function runDigest(env, now = new Date()) {
   const optedIn = await supabaseGet(env, "user_settings?email_notifications=eq.true&select=user_id,email");
   const summary = [];
 
@@ -46,7 +45,7 @@ async function runDigest(env) {
         if (!myKeys.has(e.key)) return;
         if (new Date(eventEndDate(e)) < now) return;
         eventReminderItems(e, bookings).forEach(item => {
-          if (!item.done && daysUntil(item.date) === 1) dueTomorrow.push(item);
+          if (!item.done && daysUntil(item.date, now) === 1) dueTomorrow.push(item);
         });
       });
 
@@ -80,7 +79,9 @@ export default {
     if (url.searchParams.get("key") !== env.ADMIN_KEY) {
       return new Response("Not found", { status: 404 });
     }
-    const summary = await runDigest(env);
+    const nowParam = url.searchParams.get("now");
+    const now = nowParam ? new Date(nowParam) : new Date();
+    const summary = await runDigest(env, now);
     return new Response(JSON.stringify(summary, null, 2), {
       headers: { "Content-Type": "application/json" },
     });

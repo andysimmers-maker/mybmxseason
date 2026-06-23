@@ -880,6 +880,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
           ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen }] : []),
           ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen, done: !!b.gazebo }] : []),
           { label: "Entries close", date: e.entryClose, done: !!b.entry },
+          ...(e.practiceBookingClose ? [{ label: "Practice booking closes", date: e.practiceBookingClose, done: !!b.practice }] : []),
           { label: "Practice", date: e.practiceDate },
           ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
         ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date))

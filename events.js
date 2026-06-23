@@ -30,12 +30,12 @@ export function formatDate(dateStr) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function daysUntil(dateStr) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+export function daysUntil(dateStr, now = new Date()) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
   const [year, month, day] = dateStr.split("-").map(Number);
   const target = new Date(year, month - 1, day);
-  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 }
 
 export function dayBefore(dateStr) {
@@ -66,6 +66,7 @@ export function eventDeadlines(e, bookings) {
     return [
       e.entryClose && { label: `${e.city} entries close`, date: e.entryClose, done: !!b.entry },
       e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen, done: !!b.parking },
+      e.practiceBookingClose && { label: `${e.city} practice booking closes`, date: e.practiceBookingClose, done: !!b.practice },
       e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen },
       e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen, done: !!b.gazebo },
     ].filter(Boolean);
@@ -113,6 +114,12 @@ export function eventHeroTiles(e) {
 }
 
 export function eventReminderItems(e, bookings) {
+  if (e.type === "club") return eventDeadlines(e, bookings);
   const title = eventLabel(e);
-  return [...eventDeadlines(e, bookings), { label: `${title} race day`, date: eventDate(e) }];
+  const items = [...eventDeadlines(e, bookings)];
+  if (e.type === "national" && e.practiceDate) {
+    items.push({ label: `${title} practice day`, date: e.practiceDate });
+  }
+  items.push({ label: `${title} race day`, date: eventDate(e) });
+  return items;
 }

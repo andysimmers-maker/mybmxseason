@@ -26,7 +26,8 @@ export const ALL_EVENTS = [...NATIONAL, ...NORTH_REGION, ...CLUB_RACES];
 export const EVENT_TYPE_LABELS = { national: "National", north: "North Region", club: "Club" };
 
 export function formatDate(dateStr) {
-  const d = new Date(dateStr);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -60,16 +61,29 @@ export function eventLabel(e) {
   return e.club;
 }
 
+// Single source of truth for national deadline fields — used to build both the
+// city-prefixed labels (Dashboard/email digest) and the short labels (Calendar cards),
+// so adding/removing a deadline only needs updating in one place.
+const NATIONAL_DEADLINE_FIELDS = [
+  { bookingKey: "entry", dateField: "entryClose", shortLabel: "Entries close" },
+  { bookingKey: "parking", dateField: "parkingOpen", shortLabel: "Parking opens" },
+  { bookingKey: "practice", dateField: "practiceBookingClose", shortLabel: "Practice booking closes" },
+  { bookingKey: "hotel", dateField: "campingOpen", shortLabel: "Camping opens", condition: e => e.campingAvailable },
+  { bookingKey: "gazebo", dateField: "gazeboBookingOpen", shortLabel: "Gazebo booking opens", condition: e => e.gazeboBookingOpen !== "TBC" },
+];
+
+function nationalDeadlineItems(e, bookings) {
+  const b = (bookings && bookings[e.weekendId]) || {};
+  return NATIONAL_DEADLINE_FIELDS
+    .filter(f => !f.condition || f.condition(e))
+    .map(f => e[f.dateField] && { label: f.shortLabel, date: e[f.dateField], done: !!b[f.bookingKey] })
+    .filter(Boolean);
+}
+
 export function eventDeadlines(e, bookings) {
   if (e.type === "national") {
     const b = (bookings && bookings[e.weekendId]) || {};
-    return [
-      e.entryClose && { label: `${e.city} entries close`, date: e.entryClose, done: !!b.entry },
-      e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen, done: !!b.parking },
-      e.practiceBookingClose && { label: `${e.city} practice booking closes`, date: e.practiceBookingClose, done: !!b.practice },
-      e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen, done: !!b.hotel },
-      e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen, done: !!b.gazebo },
-    ].filter(Boolean);
+    return nationalDeadlineItems(e, bookings).map(item => ({ ...item, label: `${e.city} ${item.label.toLowerCase()}` }));
   }
   if (e.type === "north") {
     if (e.status === "tbc") return [];
@@ -79,6 +93,23 @@ export function eventDeadlines(e, bookings) {
     return [{ label: `${e.club} race day`, date: e.date }];
   }
   return [];
+}
+
+export function eventCalendarItems(e, bookings) {
+  if (e.type === "national") {
+    const items = [
+      { label: "Entries open", date: e.entryOpen },
+      ...nationalDeadlineItems(e, bookings),
+      { label: "Practice", date: e.practiceDate },
+      ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
+    ];
+    return items.filter(d => d.date);
+  }
+  if (e.type === "north") {
+    if (e.status === "tbc") return [];
+    return [...eventDeadlines(e, bookings), { label: "Race day", date: e.date }];
+  }
+  return eventDeadlines(e, bookings);
 }
 
 export function eventHeroTitle(e) {

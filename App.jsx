@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import COACHING_DATA from "./coaching.json";
 import ACCOMMODATION_DATA from "./accommodation.json";
 import { supabase } from "./supabase";
 import {
   WEEKENDS, ALL_EVENTS, EVENT_TYPE_LABELS,
   formatDate, daysUntil, dayBefore,
-  eventDate, eventEndDate, eventLabel, eventDeadlines,
+  eventDate, eventEndDate, eventLabel, eventDeadlines, eventCalendarItems,
   eventHeroTitle, eventHeroSubtitle, eventHeroEyebrow, eventHeroTiles,
 } from "./events.js";
 
@@ -15,12 +15,14 @@ const COLORS = {
   card: "#1e1e1e",
   border: "#2a2a2a",
   red: "#e63329",
+  redText: "#fa4a3e", // lighter red, used for text-on-dark — #e63329 fails WCAG AA as text
   blue: "#1a6fd4",
+  blueText: "#4d9fff", // lighter blue, used for text-on-dark — #1a6fd4 fails WCAG AA as text
   yellow: "#f5a623",
   green: "#2ecc71",
   textPrimary: "#f0f0f0",
   textSecondary: "#9a9a9a",
-  textMuted: "#6b6b6b",
+  textMuted: "#8a8a8a", // lightened from #6b6b6b — original failed WCAG AA contrast on dark backgrounds
 };
 
 const DEFAULT_CHECKLIST = [
@@ -47,13 +49,13 @@ const DEFAULT_CHECKLIST = [
 ];
 
 const CATEGORY_COLORS = {
-  bike: COLORS.blue,
-  safety: COLORS.red,
-  kit: COLORS.blue,
-  admin: COLORS.blue,
-  equipment: COLORS.blue,
-  race: COLORS.blue,
-  travel: COLORS.blue,
+  bike: COLORS.blueText,
+  safety: COLORS.redText,
+  kit: COLORS.blueText,
+  admin: COLORS.blueText,
+  equipment: COLORS.blueText,
+  race: COLORS.blueText,
+  travel: COLORS.blueText,
 };
 
 function CoachingView() {
@@ -80,7 +82,7 @@ function CoachingView() {
             <button key={c} onClick={() => setFilterCoach(c)} style={{
               background: filterCoach === c ? `${COLORS.red}22` : COLORS.surface,
               border: `1px solid ${filterCoach === c ? COLORS.red : COLORS.border}`,
-              color: filterCoach === c ? COLORS.red : COLORS.textSecondary,
+              color: filterCoach === c ? COLORS.redText : COLORS.textSecondary,
               borderRadius: 20, padding: "5px 14px", cursor: "pointer", fontSize: 12, fontWeight: 500,
             }}>{c}</button>
           ))}
@@ -128,7 +130,7 @@ function CoachingView() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                     {!past && days >= 0 && (
-                      <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.redText : COLORS.textSecondary }}>
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
                       </div>
                     )}
@@ -194,7 +196,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
           border: `1px solid ${COLORS.border}`,
           borderRadius: 12, padding: 24, marginBottom: 24,
         }}>
-          <div style={{ fontSize: 11, letterSpacing: 2, color: COLORS.red, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: COLORS.redText, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase" }}>
             Next Up · {eventHeroEyebrow(nextEvent)}
           </div>
           <div style={{ fontSize: 28, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary, marginBottom: 4 }}>
@@ -211,7 +213,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
                   background: COLORS.card, border: `1px solid ${COLORS.border}`,
                   borderRadius: 8, padding: "10px 16px", textAlign: "center",
                 }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: d <= 14 ? COLORS.red : COLORS.textPrimary }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: d <= 14 ? COLORS.redText : COLORS.textPrimary }}>
                     {d < 0 ? "—" : d === 0 ? "Today" : `${d}d`}
                   </div>
                   <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{item.label}</div>
@@ -233,7 +235,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
           background: `${COLORS.blue}0d`, border: `1px solid ${COLORS.blue}44`,
           borderRadius: 12, padding: 20, marginBottom: 16,
         }}>
-          <div style={{ fontSize: 12, color: COLORS.blue, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: COLORS.blueText, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
             My Season — {myEventsList.length} event{myEventsList.length > 1 ? "s" : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: myDeadlines.length > 0 ? 14 : 0 }}>
@@ -249,9 +251,9 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
                   borderRadius: 8, padding: "8px 14px", cursor: "pointer", textAlign: "center",
                   font: "inherit", color: "inherit",
                 }}>
-                  <div style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, marginBottom: 2 }}>{badge}</div>
+                  <div style={{ fontSize: 11, color: COLORS.blueText, fontWeight: 700, marginBottom: 2 }}>{badge}</div>
                   <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{title}</div>
-                  <div style={{ fontSize: 11, color: days <= 14 ? COLORS.red : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
+                  <div style={{ fontSize: 11, color: days <= 14 ? COLORS.redText : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
                     {days === 0 ? "Today" : `${days}d`}
                   </div>
                 </button>
@@ -308,7 +310,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
                   <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: 600 }}>{s.coach}</div>
                   <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{s.venue.split(",")[0]} · {formatDate(s.date)} · {s.time}</div>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary, marginRight: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.redText : COLORS.textSecondary, marginRight: 8 }}>
                   {days === 0 ? "Today" : `${days}d`}
                 </div>
                 {s.groupCode && (
@@ -367,7 +369,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
       </button>
 
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: COLORS.redText, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
           Rounds {weekend.roundNumbers.join(" & ")}
         </div>
         <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>
@@ -405,7 +407,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               <button onClick={() => toggleMyRound(weekend.weekendId)} style={{
                 background: isMine ? `${COLORS.blue}22` : COLORS.card,
                 border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
-                color: isMine ? COLORS.blue : COLORS.textSecondary,
+                color: isMine ? COLORS.blueText : COLORS.textSecondary,
                 borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
               }}>
                 {isMine ? "✓ I'm Going" : "+ I'm Going"}
@@ -460,7 +462,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                       textDecoration: isChecked ? "line-through" : "none",
                     }}>{item.label}</span>
                     {item.hasDetails && isChecked && (
-                      <span style={{ fontSize: 11, color: COLORS.blue, marginLeft: "auto" }}>
+                      <span style={{ fontSize: 11, color: COLORS.blueText, marginLeft: "auto" }}>
                         {details.name ? "Edit details" : "Add details"}
                       </span>
                     )}
@@ -474,21 +476,25 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                         { key: "checkIn", label: "Arrival date" },
                         { key: "checkOut", label: "Departure date" },
                         { key: "phone", label: "Phone number" },
-                      ].map(field => (
-                        <div key={field.key} style={{ gridColumn: field.full ? "1 / -1" : "auto" }}>
-                          <div style={{ fontSize: 10, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{field.label}</div>
-                          <input
-                            value={details[field.key] || ""}
-                            onChange={e => updateBooking(`${item.key}_details`, { ...details, [field.key]: e.target.value })}
-                            onClick={e => e.stopPropagation()}
-                            style={{
-                              width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-                              borderRadius: 6, padding: "7px 10px", fontSize: 13, color: COLORS.textPrimary,
-                              outline: "none", boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                      ))}
+                      ].map(field => {
+                        const fieldId = `${item.key}_${field.key}`;
+                        return (
+                          <div key={field.key} style={{ gridColumn: field.full ? "1 / -1" : "auto" }}>
+                            <label htmlFor={fieldId} style={{ display: "block", fontSize: 10, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{field.label}</label>
+                            <input
+                              id={fieldId}
+                              value={details[field.key] || ""}
+                              onChange={e => updateBooking(`${item.key}_details`, { ...details, [field.key]: e.target.value })}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+                                borderRadius: 6, padding: "7px 10px", fontSize: 13, color: COLORS.textPrimary,
+                                boxSizing: "border-box",
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {item.hasDetails && isChecked && details.name && !showForm && (
@@ -511,7 +517,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
               {s.done && <div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700 }}>✓ Done</div>}
-              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.redText : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {!s.done && d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
@@ -524,7 +530,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
           {weekend.gazeboBookingOpen && (
             <div style={{
               display: "inline-block", fontSize: 11, fontWeight: 700, marginBottom: 10,
-              color: weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : COLORS.blue,
+              color: weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : COLORS.blueText,
               background: weekend.gazeboBookingOpen === "TBC" ? `${COLORS.textMuted}18` : `${COLORS.blue}22`,
               border: `1px solid ${weekend.gazeboBookingOpen === "TBC" ? COLORS.textMuted : COLORS.blue}44`,
               borderRadius: 20, padding: "3px 10px",
@@ -540,13 +546,13 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
         </div>
         {weekend.practiceInfo && (
           <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 10, padding: 18 }}>
-            <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Practice Info</div>
+            <div style={{ fontSize: 12, color: COLORS.blueText, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Practice Info</div>
             <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.practiceInfo}</div>
           </div>
         )}
         {weekend.campingInfo && (
           <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 10, padding: 18 }}>
-            <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping Details</div>
+            <div style={{ fontSize: 12, color: COLORS.blueText, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Camping Details</div>
             <div style={{ fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.6 }}>{weekend.campingInfo}</div>
           </div>
         )}
@@ -564,7 +570,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
         return (
           <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}44`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: COLORS.blue, textTransform: "uppercase", letterSpacing: 1 }}>Coaching Sessions</div>
+              <div style={{ fontSize: 12, color: COLORS.blueText, textTransform: "uppercase", letterSpacing: 1 }}>Coaching Sessions</div>
               <button onClick={onViewCoaching} style={{
                 background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary,
                 borderRadius: 8, padding: "4px 12px", cursor: "pointer", fontSize: 11,
@@ -585,7 +591,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                     <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{formatDate(s.date)} · {s.time} · {s.ageGroups}</div>
                   </div>
                   {!past && (
-                    <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.red : COLORS.textSecondary, marginRight: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.redText : COLORS.textSecondary, marginRight: 4 }}>
                       {days === 0 ? "Today" : `${days}d`}
                     </div>
                   )}
@@ -615,7 +621,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
                   <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{a.name}</div>
                   <div style={{
                     fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-                    color: COLORS.blue,
+                    color: COLORS.blueText,
                     background: `${COLORS.blue}22`,
                     borderRadius: 10, padding: "2px 8px",
                   }}>{a.type}</div>
@@ -718,7 +724,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
       </button>
 
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: COLORS.redText, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
           North Region · {event.name}
         </div>
         <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>
@@ -765,7 +771,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
             <button onClick={() => toggleMyRound(event.key)} style={{
               background: isMine ? `${COLORS.blue}22` : COLORS.card,
               border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
-              color: isMine ? COLORS.blue : COLORS.textSecondary,
+              color: isMine ? COLORS.blueText : COLORS.textSecondary,
               borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
             }}>
               {isMine ? "✓ I'm Going" : "+ I'm Going"}
@@ -782,7 +788,7 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
               {s.done && <div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700 }}>✓ Done</div>}
-              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.redText : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {!s.done && d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
@@ -806,7 +812,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
       </button>
 
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: COLORS.redText, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
           Club · {event.series} R{event.round}
         </div>
         <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>
@@ -842,7 +848,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
             <button onClick={() => toggleMyRound(event.key)} style={{
               background: isMine ? `${COLORS.blue}22` : COLORS.card,
               border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
-              color: isMine ? COLORS.blue : COLORS.textSecondary,
+              color: isMine ? COLORS.blueText : COLORS.textSecondary,
               borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
             }}>
               {isMine ? "✓ I'm Going" : "+ I'm Going"}
@@ -854,7 +860,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
       <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px", maxWidth: 160 }}>
         <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>Race day</div>
         <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(event.date)}</div>
-        {d >= 0 && <div style={{ fontSize: 12, color: COLORS.red, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+        {d >= 0 && <div style={{ fontSize: 12, color: COLORS.redText, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
         {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
       </div>
     </div>
@@ -878,7 +884,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
             <button key={c} onClick={() => setFilterType(c)} style={{
               background: filterType === c ? `${COLORS.red}22` : COLORS.surface,
               border: `1px solid ${filterType === c ? COLORS.red : COLORS.border}`,
-              color: filterType === c ? COLORS.red : COLORS.textSecondary,
+              color: filterType === c ? COLORS.redText : COLORS.textSecondary,
               borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 500,
             }}>
               {c}
@@ -892,20 +898,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
         const isMine = myRounds && myRounds.has(e.key);
         const isTbc = e.type === "north" && e.status === "tbc";
 
-        const b = (bookings && bookings[e.weekendId]) || {};
-        const deadlines = e.type === "national" ? [
-          { label: "Entries open", date: e.entryOpen },
-          { label: "Parking opens", date: e.parkingOpen, done: !!b.parking },
-          ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen, done: !!b.hotel }] : []),
-          ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen, done: !!b.gazebo }] : []),
-          { label: "Entries close", date: e.entryClose, done: !!b.entry },
-          ...(e.practiceBookingClose ? [{ label: "Practice booking closes", date: e.practiceBookingClose, done: !!b.practice }] : []),
-          { label: "Practice", date: e.practiceDate },
-          ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
-        ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date))
-          : e.type === "north" && !isTbc
-          ? [...eventDeadlines(e), { label: "Race day", date: e.date }].sort((a, b) => new Date(a.date) - new Date(b.date))
-          : eventDeadlines(e);
+        const deadlines = [...eventCalendarItems(e, bookings)].sort((a, b) => new Date(a.date) - new Date(b.date));
 
         const title = e.type === "national" ? `${e.venue} — ${e.city}`
           : e.type === "north" ? e.location
@@ -923,7 +916,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 12 }}>
               <div>
-                <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
+                <div style={{ fontSize: 11, color: COLORS.redText, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
                   {eyebrow}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -951,7 +944,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
                   <button onClick={() => toggleMyRound && toggleMyRound(e.key)} style={{
                     background: isMine ? `${COLORS.blue}22` : "none",
                     border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
-                    color: isMine ? COLORS.blue : COLORS.textMuted,
+                    color: isMine ? COLORS.blueText : COLORS.textMuted,
                     borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
                   }}>
                     {isMine ? "✓ Going" : "+ Going"}
@@ -980,11 +973,11 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
                         fontSize: 12,
                       }}>
                         <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
-                        <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
+                        <span style={{ color: isRaceDay ? COLORS.redText : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
                         {d.done ? (
                           <span style={{ color: COLORS.green, fontWeight: 700, marginLeft: 6 }}>✓ Done</span>
                         ) : days >= 0 && days <= 30 && (
-                          <span style={{ color: days <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
+                          <span style={{ color: days <= 7 ? COLORS.redText : COLORS.textSecondary, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
                         )}
                       </div>
                     );
@@ -1013,17 +1006,29 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
+  const loadedUserId = useRef(null);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
-      if (session) loadUserData(session.user.id);
+      if (session && loadedUserId.current !== session.user.id) {
+        loadedUserId.current = session.user.id;
+        loadUserData(session.user.id);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) loadUserData(session.user.id);
-      else { setMyRounds(new Set()); setBookings({}); setChecklist({}); setNotificationsEnabled(false); }
+      if (session) {
+        if (loadedUserId.current !== session.user.id) {
+          loadedUserId.current = session.user.id;
+          loadUserData(session.user.id);
+        }
+      } else {
+        loadedUserId.current = null;
+        setMyRounds(new Set()); setBookings({}); setChecklist({}); setNotificationsEnabled(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -1181,7 +1186,7 @@ export default function App() {
               <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
                 background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
                 border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
-                color: view === n.key && !selectedWeekend ? COLORS.red : COLORS.textSecondary,
+                color: view === n.key && !selectedWeekend ? COLORS.redText : COLORS.textSecondary,
                 borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500,
               }}>
                 {n.label}
@@ -1192,7 +1197,7 @@ export default function App() {
             <button onClick={toggleNotifications} title="Email reminders the day before a deadline or race" style={{
               background: notificationsEnabled ? `${COLORS.blue}22` : "none",
               border: `1px solid ${notificationsEnabled ? COLORS.blue : COLORS.border}`,
-              color: notificationsEnabled ? COLORS.blue : COLORS.textMuted,
+              color: notificationsEnabled ? COLORS.blueText : COLORS.textMuted,
               borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600,
             }}>
               🔔 Reminders {notificationsEnabled ? "On" : "Off"}
@@ -1209,12 +1214,12 @@ export default function App() {
       {saveError && (
         <div style={{
           background: `${COLORS.red}1a`, borderBottom: `1px solid ${COLORS.red}55`,
-          color: COLORS.red, padding: "10px 24px", fontSize: 13,
+          color: COLORS.redText, padding: "10px 24px", fontSize: 13,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         }}>
           <span>{saveError}</span>
           <button type="button" onClick={() => setSaveError(null)} aria-label="Dismiss" style={{
-            background: "none", border: "none", color: COLORS.red, cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0,
+            background: "none", border: "none", color: COLORS.redText, cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0,
           }}>×</button>
         </div>
       )}

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import SEASON_DATA from "./seasons.json";
+import NORTH_REGION_DATA from "./northRegion.json";
+import CLUB_RACES_DATA from "./clubRaces.json";
 import COACHING_DATA from "./coaching.json";
 import ACCOMMODATION_DATA from "./accommodation.json";
 import { supabase } from "./supabase";
@@ -35,6 +37,13 @@ const WEEKENDS = (() => {
     isNatChamps: rounds.some(r => r.isNatChamps),
   }));
 })();
+
+const NATIONAL = WEEKENDS.map(w => ({ ...w, type: "national", key: w.weekendId }));
+const NORTH_REGION = NORTH_REGION_DATA.map(r => ({ ...r, type: "north", key: `north-${r.id}` }));
+const CLUB_RACES = CLUB_RACES_DATA.map(r => ({ ...r, type: "club", key: `club-${r.id}` }));
+const ALL_EVENTS = [...NATIONAL, ...NORTH_REGION, ...CLUB_RACES];
+
+const EVENT_TYPE_LABELS = { national: "National", north: "North Region", club: "Club" };
 
 const DEFAULT_CHECKLIST = [
   { id: "bike", label: "Bike checked and race-ready", category: "bike" },
@@ -80,6 +89,47 @@ function daysUntil(dateStr) {
   const [year, month, day] = dateStr.split("-").map(Number);
   const target = new Date(year, month - 1, day);
   return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+}
+
+function dayBefore(dateStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
+  d.setDate(d.getDate() - 1);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function eventDate(e) {
+  return e.type === "national" ? e.dates[0] : e.date;
+}
+
+function eventEndDate(e) {
+  return e.type === "national" ? e.dates[e.dates.length - 1] : e.date;
+}
+
+function eventLabel(e) {
+  if (e.type === "national") return e.city;
+  if (e.type === "north") return e.venue;
+  return e.club;
+}
+
+function eventDeadlines(e) {
+  if (e.type === "national") {
+    return [
+      e.entryClose && { label: `${e.city} entries close`, date: e.entryClose },
+      e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen },
+      e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen },
+      e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen },
+    ].filter(Boolean);
+  }
+  if (e.type === "north") {
+    if (e.status === "tbc") return [];
+    return [{ label: `${e.venue} registration closes (11:45am)`, date: dayBefore(e.date) }];
+  }
+  if (e.type === "club") {
+    return [{ label: `${e.club} race day`, date: e.date }];
+  }
+  return [];
 }
 
 function DeadlinePill({ label, date }) {
@@ -204,12 +254,9 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
   const nextWeekend = upcomingWeekends[0];
 
   const allDeadlines = [];
-  WEEKENDS.forEach(w => {
-    if (new Date(w.dates[0]) >= now) {
-      if (daysUntil(w.entryClose) >= 0) allDeadlines.push({ label: `${w.city} entries close`, date: w.entryClose });
-      if (daysUntil(w.parkingOpen) >= 0) allDeadlines.push({ label: `${w.city} parking opens`, date: w.parkingOpen });
-      if (w.campingAvailable && daysUntil(w.campingOpen) >= 0) allDeadlines.push({ label: `${w.city} camping opens`, date: w.campingOpen });
-      if (w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" && daysUntil(w.gazeboBookingOpen) >= 0) allDeadlines.push({ label: `${w.city} gazebo booking opens`, date: w.gazeboBookingOpen });
+  ALL_EVENTS.forEach(e => {
+    if (new Date(eventEndDate(e)) >= now) {
+      eventDeadlines(e).forEach(d => { if (daysUntil(d.date) >= 0) allDeadlines.push(d); });
     }
   });
   allDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -221,12 +268,10 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
     .slice(0, 4);
 
   const myWeekendsList = WEEKENDS.filter(w => myRounds.has(w.weekendId) && new Date(w.dates[0]) >= now);
+  const myEventsList = ALL_EVENTS.filter(e => myRounds.has(e.key) && new Date(eventEndDate(e)) >= now);
   const myDeadlines = [];
-  myWeekendsList.forEach(w => {
-    if (daysUntil(w.entryClose) >= 0) myDeadlines.push({ label: `${w.city} entries close`, date: w.entryClose, city: w.city });
-    if (daysUntil(w.parkingOpen) >= 0) myDeadlines.push({ label: `${w.city} parking opens`, date: w.parkingOpen, city: w.city });
-    if (w.campingAvailable && daysUntil(w.campingOpen) >= 0) myDeadlines.push({ label: `${w.city} camping opens`, date: w.campingOpen, city: w.city });
-    if (w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" && daysUntil(w.gazeboBookingOpen) >= 0) myDeadlines.push({ label: `${w.city} gazebo opens`, date: w.gazeboBookingOpen, city: w.city });
+  myEventsList.forEach(e => {
+    eventDeadlines(e).forEach(d => { if (daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
   });
   myDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -345,12 +390,23 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
           <div style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             Season Overview
           </div>
-          {WEEKENDS.map(w => {
-            const past = new Date(w.dates[w.dates.length - 1]) < now;
-            const isNext = nextWeekend && w.weekendId === nextWeekend.weekendId;
-            const isMine = myRounds.has(w.weekendId);
+          {[...ALL_EVENTS].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b))).map(e => {
+            const past = new Date(eventEndDate(e)) < now;
+            const isNext = nextWeekend && e.type === "national" && e.weekendId === nextWeekend.weekendId;
+            const isMine = myRounds.has(e.key);
+            const isTbc = e.type === "north" && e.status === "tbc";
+            const clickable = e.type === "national";
+            const badge = e.type === "national" ? e.roundNumbers.join("·")
+              : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
+              : "CLUB";
+            const title = e.type === "national" ? e.city : e.type === "north" ? e.venue : e.club;
+            const subtitle = e.type === "national"
+              ? `${formatDate(e.dates[0])} – ${formatDate(e.dates[e.dates.length - 1])}`
+              : e.type === "north"
+              ? `${e.name}${isTbc ? " (TBC)" : ""} · ${formatDate(e.date)}`
+              : `${e.series} R${e.round} · ${formatDate(e.date)}`;
             return (
-              <div key={w.weekendId} style={{
+              <div key={e.key} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "10px 0",
                 borderBottom: `1px solid ${COLORS.border}`,
                 background: isMine ? `${COLORS.blue}0a` : "transparent",
@@ -359,22 +415,22 @@ function Dashboard({ onSelectWeekend, myRounds, toggleMyRound }) {
                 opacity: past ? 0.45 : 1,
                 transition: "all 0.15s",
               }}>
-                <div onClick={() => onSelectWeekend(w)} style={{
-                  height: 28, borderRadius: 14, cursor: "pointer",
-                  background: isMine ? COLORS.blue : isNext ? COLORS.red : past ? COLORS.textMuted : COLORS.border,
+                <div onClick={clickable ? () => onSelectWeekend(e) : undefined} style={{
+                  height: 28, borderRadius: 14, cursor: clickable ? "pointer" : "default",
+                  background: isMine ? COLORS.blue : isNext ? COLORS.red : isTbc || past ? COLORS.textMuted : COLORS.border,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, padding: "0 8px",
                 }}>
-                  {w.roundNumbers.join("·")}
+                  {badge}
                 </div>
-                <div onClick={() => onSelectWeekend(w)} style={{ flex: 1, cursor: "pointer" }}>
-                  <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: isMine ? 600 : 500 }}>{w.city}</div>
-                  <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{formatDate(w.dates[0])} – {formatDate(w.dates[w.dates.length - 1])}</div>
+                <div onClick={clickable ? () => onSelectWeekend(e) : undefined} style={{ flex: 1, cursor: clickable ? "pointer" : "default" }}>
+                  <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: isMine ? 600 : 500 }}>{title}</div>
+                  <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{subtitle}</div>
                 </div>
                 {isNext && !isMine && <div style={{ fontSize: 10, color: COLORS.red, fontWeight: 700, letterSpacing: 1 }}>NEXT</div>}
                 {past && <div style={{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 }}>DONE</div>}
                 {!past && (
-                  <button onClick={(e) => { e.stopPropagation(); toggleMyRound(w.weekendId); }} style={{
+                  <button onClick={(ev) => { ev.stopPropagation(); toggleMyRound(e.key); }} style={{
                     background: isMine ? `${COLORS.blue}22` : "none",
                     border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
                     color: isMine ? COLORS.blue : COLORS.textMuted,
@@ -781,77 +837,136 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
   );
 }
 
-function CalendarView({ onSelectWeekend, myRounds }) {
+function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
   const now = new Date();
+  const [filterType, setFilterType] = useState("All");
+  const filterChips = ["All", "National", "North Region", "Club"];
+  const filtered = [...ALL_EVENTS]
+    .filter(e => filterType === "All" || EVENT_TYPE_LABELS[e.type] === filterType)
+    .sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b)));
+
   return (
     <div>
-      <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 20 }}>
-        2026 National Series
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>2026 Race Calendar</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {filterChips.map(c => (
+            <button key={c} onClick={() => setFilterType(c)} style={{
+              background: filterType === c ? `${COLORS.red}22` : COLORS.surface,
+              border: `1px solid ${filterType === c ? COLORS.red : COLORS.border}`,
+              color: filterType === c ? COLORS.red : COLORS.textSecondary,
+              borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 500,
+            }}>
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
-      {WEEKENDS.map(w => {
-        const past = new Date(w.dates[w.dates.length - 1]) < now;
-        const deadlines = [
-          { label: "Entries open", date: w.entryOpen },
-          { label: "Parking opens", date: w.parkingOpen },
-          ...(w.campingAvailable ? [{ label: "Camping opens", date: w.campingOpen }] : []),
-          ...(w.gazeboBookingOpen && w.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: w.gazeboBookingOpen }] : []),
-          { label: "Entries close", date: w.entryClose },
-          { label: "Practice", date: w.practiceDate },
-          ...w.dates.map((date, i) => ({ label: w.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
-        ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      {filtered.map(e => {
+        const past = new Date(eventEndDate(e)) < now;
+        const isMine = myRounds && myRounds.has(e.key);
+        const isTbc = e.type === "north" && e.status === "tbc";
+
+        const deadlines = e.type === "national" ? [
+          { label: "Entries open", date: e.entryOpen },
+          { label: "Parking opens", date: e.parkingOpen },
+          ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen }] : []),
+          ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen }] : []),
+          { label: "Entries close", date: e.entryClose },
+          { label: "Practice", date: e.practiceDate },
+          ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
+        ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date))
+          : e.type === "north" && !isTbc
+          ? [...eventDeadlines(e), { label: "Race day", date: e.date }].sort((a, b) => new Date(a.date) - new Date(b.date))
+          : eventDeadlines(e);
+
+        const title = e.type === "national" ? `${e.venue} — ${e.city}`
+          : e.type === "north" ? `${e.name} — ${e.venue}${e.location ? `, ${e.location}` : ""}`
+          : `${e.club} — ${e.series} R${e.round}`;
+        const eyebrow = e.type === "national" ? `Rounds ${e.roundNumbers.join(" & ")}`
+          : EVENT_TYPE_LABELS[e.type];
 
         return (
-          <div key={w.weekendId} style={{
+          <div key={e.key} style={{
             background: COLORS.card,
-            border: `1px solid ${myRounds && myRounds.has(w.weekendId) ? COLORS.blue : COLORS.border}`,
-            borderLeft: `4px solid ${past ? COLORS.textMuted : myRounds && myRounds.has(w.weekendId) ? COLORS.blue : COLORS.red}`,
+            border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
+            borderLeft: `4px solid ${past ? COLORS.textMuted : isMine ? COLORS.blue : COLORS.red}`,
             borderRadius: 10, padding: 20, marginBottom: 16, opacity: past ? 0.55 : 1,
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 12 }}>
               <div>
                 <div style={{ fontSize: 11, color: COLORS.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
-                  Rounds {w.roundNumbers.join(" & ")}
+                  {eyebrow}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <div style={{ fontSize: 22, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 0.5, color: COLORS.textPrimary }}>
-                    {w.venue} — {w.city}
+                    {title}
                   </div>
-                  {w.isNatChamps && (
+                  {e.type === "national" && e.isNatChamps && (
                     <div style={{
                       fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
                       background: `${COLORS.yellow}22`, color: COLORS.yellow,
                       border: `1px solid ${COLORS.yellow}55`, borderRadius: 20, padding: "3px 10px",
                     }}>★ Nat Champs</div>
                   )}
+                  {isTbc && (
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
+                      background: `${COLORS.textMuted}22`, color: COLORS.textMuted,
+                      border: `1px solid ${COLORS.textMuted}55`, borderRadius: 20, padding: "3px 10px",
+                    }}>Date TBC</div>
+                  )}
                 </div>
               </div>
-              <button onClick={() => onSelectWeekend(w)} style={{
-                background: COLORS.red, color: "#fff", border: "none",
-                borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
-              }}>
-                Details →
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {deadlines.map((d, i) => {
-                const days = daysUntil(d.date);
-                const isRaceDay = d.label.startsWith("Day") || d.label === "Race day";
-                return (
-                  <div key={i} style={{
-                    padding: "5px 12px", borderRadius: 20,
-                    background: isRaceDay ? `${COLORS.red}22` : COLORS.surface,
-                    border: `1px solid ${isRaceDay ? COLORS.red : COLORS.border}`,
-                    fontSize: 12,
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                {!past && (
+                  <button onClick={() => toggleMyRound && toggleMyRound(e.key)} style={{
+                    background: isMine ? `${COLORS.blue}22` : "none",
+                    border: `1px solid ${isMine ? COLORS.blue : COLORS.border}`,
+                    color: isMine ? COLORS.blue : COLORS.textMuted,
+                    borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
                   }}>
-                    <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
-                    <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
-                    {days >= 0 && days <= 30 && (
-                      <span style={{ color: COLORS.yellow, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
-                    )}
-                  </div>
-                );
-              })}
+                    {isMine ? "✓ Going" : "+ Going"}
+                  </button>
+                )}
+                {e.type === "national" && (
+                  <button onClick={() => onSelectWeekend(e)} style={{
+                    background: COLORS.red, color: "#fff", border: "none",
+                    borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+                  }}>
+                    Details →
+                  </button>
+                )}
+              </div>
             </div>
+            {e.type !== "club" && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {deadlines.length === 0
+                  ? <div style={{ fontSize: 12, color: COLORS.textMuted }}>Date to be confirmed</div>
+                  : deadlines.map((d, i) => {
+                    const days = daysUntil(d.date);
+                    const isRaceDay = d.label.startsWith("Day") || d.label === "Race day";
+                    return (
+                      <div key={i} style={{
+                        padding: "5px 12px", borderRadius: 20,
+                        background: isRaceDay ? `${COLORS.red}22` : COLORS.surface,
+                        border: `1px solid ${isRaceDay ? COLORS.red : COLORS.border}`,
+                        fontSize: 12,
+                      }}>
+                        <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
+                        <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
+                        {days >= 0 && days <= 30 && (
+                          <span style={{ color: COLORS.yellow, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+            {e.type === "club" && (
+              <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{formatDate(e.date)}</div>
+            )}
           </div>
         );
       })}
@@ -1082,7 +1197,7 @@ export default function App() {
               updateBooking={(key, value) => updateBooking(selectedWeekend.weekendId, key, value)}
             />
           : view === "calendar"
-          ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} />
+          ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />
           : view === "coaching"
           ? <CoachingView />
           : <Dashboard onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />

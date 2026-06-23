@@ -345,7 +345,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
     { key: "entry_close", label: "Entries Close", date: weekend.entryClose, done: !!bookings.entry },
     { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
     ...(weekend.campingAvailable ? [
-      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen },
+      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen, done: !!bookings.hotel },
     ] : []),
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
       { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo },
@@ -896,7 +896,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
         const deadlines = e.type === "national" ? [
           { label: "Entries open", date: e.entryOpen },
           { label: "Parking opens", date: e.parkingOpen, done: !!b.parking },
-          ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen }] : []),
+          ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen, done: !!b.hotel }] : []),
           ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen, done: !!b.gazebo }] : []),
           { label: "Entries close", date: e.entryClose, done: !!b.entry },
           ...(e.practiceBookingClose ? [{ label: "Practice booking closes", date: e.practiceBookingClose, done: !!b.practice }] : []),

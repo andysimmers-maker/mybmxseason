@@ -67,7 +67,7 @@ export function eventDeadlines(e, bookings) {
       e.entryClose && { label: `${e.city} entries close`, date: e.entryClose, done: !!b.entry },
       e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen, done: !!b.parking },
       e.practiceBookingClose && { label: `${e.city} practice booking closes`, date: e.practiceBookingClose, done: !!b.practice },
-      e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen },
+      e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen, done: !!b.hotel },
       e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen, done: !!b.gazebo },
     ].filter(Boolean);
   }

@@ -111,13 +111,14 @@ function eventLabel(e) {
   return e.club;
 }
 
-function eventDeadlines(e) {
+function eventDeadlines(e, bookings) {
   if (e.type === "national") {
+    const b = (bookings && bookings[e.weekendId]) || {};
     return [
-      e.entryClose && { label: `${e.city} entries close`, date: e.entryClose },
-      e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen },
+      e.entryClose && { label: `${e.city} entries close`, date: e.entryClose, done: !!b.entry },
+      e.parkingOpen && { label: `${e.city} parking opens`, date: e.parkingOpen, done: !!b.parking },
       e.campingAvailable && e.campingOpen && { label: `${e.city} camping opens`, date: e.campingOpen },
-      e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen },
+      e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" && { label: `${e.city} gazebo opens`, date: e.gazeboBookingOpen, done: !!b.gazebo },
     ].filter(Boolean);
   }
   if (e.type === "north") {
@@ -256,7 +257,7 @@ function CoachingView() {
   );
 }
 
-function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound }) {
+function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, bookings }) {
   const now = new Date();
 
   const upcomingCoaching = COACHING_DATA
@@ -269,7 +270,7 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound })
   const nextEvent = myEventsList[0];
   const myDeadlines = [];
   myEventsList.forEach(e => {
-    eventDeadlines(e).forEach(d => { if (daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
+    eventDeadlines(e, bookings).forEach(d => { if (daysUntil(d.date) >= 0) myDeadlines.push({ ...d, city: eventLabel(e) }); });
   });
   myDeadlines.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -375,7 +376,9 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound })
                     <span style={{ fontSize: 13, color: COLORS.textPrimary }}>{d.label}</span>
                     <span style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>{formatDate(d.date)}</span>
                   </div>
-                  {(() => {
+                  {d.done ? (
+                    <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.green, flexShrink: 0 }}>✓ Done</div>
+                  ) : (() => {
                     const days = daysUntil(d.date);
                     const color = days <= 7 ? COLORS.red : COLORS.textSecondary;
                     return (
@@ -445,13 +448,13 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
     })),
     { key: "practice", label: "Practice Day", date: weekend.practiceDate },
     { key: "entry_open", label: "Entries Open", date: weekend.entryOpen },
-    { key: "entry_close", label: "Entries Close", date: weekend.entryClose },
-    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen },
+    { key: "entry_close", label: "Entries Close", date: weekend.entryClose, done: !!bookings.entry },
+    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
     ...(weekend.campingAvailable ? [
       { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen },
     ] : []),
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
-      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen },
+      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo },
     ] : []),
   ];
 
@@ -604,8 +607,9 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
             <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
-              {d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
-              {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
+              {s.done && <div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700 }}>✓ Done</div>}
+              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {!s.done && d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
         })}
@@ -865,8 +869,9 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
             <div key={s.key} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 }}>{s.label}</div>
               <div style={{ fontSize: 14, color: COLORS.textPrimary, fontWeight: 600, marginBottom: 4 }}>{formatDate(s.date)}</div>
-              {d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
-              {d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
+              {s.done && <div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700 }}>✓ Done</div>}
+              {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
+              {!s.done && d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
             </div>
           );
         })}
@@ -944,7 +949,7 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
   );
 }
 
-function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
+function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
   const now = new Date();
   const [filterType, setFilterType] = useState("All");
   const filterChips = ["All", "National", "North Region", "Club"];
@@ -975,12 +980,13 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
         const isMine = myRounds && myRounds.has(e.key);
         const isTbc = e.type === "north" && e.status === "tbc";
 
+        const b = (bookings && bookings[e.weekendId]) || {};
         const deadlines = e.type === "national" ? [
           { label: "Entries open", date: e.entryOpen },
-          { label: "Parking opens", date: e.parkingOpen },
+          { label: "Parking opens", date: e.parkingOpen, done: !!b.parking },
           ...(e.campingAvailable ? [{ label: "Camping opens", date: e.campingOpen }] : []),
-          ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen }] : []),
-          { label: "Entries close", date: e.entryClose },
+          ...(e.gazeboBookingOpen && e.gazeboBookingOpen !== "TBC" ? [{ label: "Gazebo booking opens", date: e.gazeboBookingOpen, done: !!b.gazebo }] : []),
+          { label: "Entries close", date: e.entryClose, done: !!b.entry },
           { label: "Practice", date: e.practiceDate },
           ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
         ].filter(d => d.date).sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -1056,13 +1062,15 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound }) {
                     return (
                       <div key={i} style={{
                         padding: "5px 12px", borderRadius: 20,
-                        background: isRaceDay ? `${COLORS.red}22` : COLORS.surface,
-                        border: `1px solid ${isRaceDay ? COLORS.red : COLORS.border}`,
+                        background: d.done ? `${COLORS.green}18` : isRaceDay ? `${COLORS.red}22` : COLORS.surface,
+                        border: `1px solid ${d.done ? COLORS.green : isRaceDay ? COLORS.red : COLORS.border}`,
                         fontSize: 12,
                       }}>
                         <span style={{ color: COLORS.textSecondary }}>{d.label}: </span>
                         <span style={{ color: isRaceDay ? COLORS.red : COLORS.textPrimary, fontWeight: 500 }}>{formatDate(d.date)}</span>
-                        {days >= 0 && days <= 30 && (
+                        {d.done ? (
+                          <span style={{ color: COLORS.green, fontWeight: 700, marginLeft: 6 }}>✓ Done</span>
+                        ) : days >= 0 && days <= 30 && (
                           <span style={{ color: days <= 7 ? COLORS.red : COLORS.textSecondary, fontWeight: 700, marginLeft: 6 }}>{days}d</span>
                         )}
                       </div>
@@ -1317,10 +1325,10 @@ export default function App() {
               updateBooking={(key, value) => updateBooking(selectedWeekend.weekendId, key, value)}
             />
           : view === "calendar"
-          ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} />
+          ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings} />
           : view === "coaching"
           ? <CoachingView />
-          : <Dashboard onSelectWeekend={handleSelectWeekend} onGoToCalendar={() => setView("calendar")} myRounds={myRounds} toggleMyRound={toggleMyRound} />
+          : <Dashboard onSelectWeekend={handleSelectWeekend} onGoToCalendar={() => setView("calendar")} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings} />
         }
       </div>
     </div>

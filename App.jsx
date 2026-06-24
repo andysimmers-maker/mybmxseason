@@ -376,7 +376,8 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
   const sections = [
     ...weekend.dates.map((date, i) => ({
       key: `race_${i}`,
-      label: weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day",
+      label: (weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day")
+        + (weekend.rounds[i]?.ageGroups ? ` — ${weekend.rounds[i].ageGroups}` : ""),
       date,
     })),
     { key: "practice", label: "Practice Day", date: weekend.practiceDate },
@@ -391,7 +392,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
       { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo, field: "gazeboBookingOpen" },
     ] : []),
-  ];
+  ].filter(s => s.date);
 
   const categories = [...new Set(DEFAULT_CHECKLIST.map(i => i.category))];
   const checked = checklist[weekend.weekendId] || {};

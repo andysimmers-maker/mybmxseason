@@ -113,7 +113,10 @@ export function eventCalendarItems(e, bookings) {
     const items = [
       ...nationalDeadlineItems(e, bookings),
       { label: "Practice", date: e.practiceDate },
-      ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
+      ...e.dates.map((date, i) => ({
+        label: (e.dates.length > 1 ? `Day ${i + 1}` : "Race day") + (e.rounds[i]?.ageGroups ? ` — ${e.rounds[i].ageGroups}` : ""),
+        date,
+      })),
     ];
     return items.filter(d => d.date);
   }

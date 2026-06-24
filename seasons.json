@@ -142,5 +142,31 @@
     "website": "https://www.derbybmx.com",
     "facebook": "https://www.facebook.com/derbybmx",
     "status": "upcoming"
+  },
+  {
+    "id": 11, "round": 11, "weekend": "britishchamps-2026",
+    "venue": "Manchester BMX Club (Platt Fields)", "city": "Manchester",
+    "date": "2026-08-29", "practiceDate": null, "ageGroups": "Cruiser & 12 & Under",
+    "parkingOpen": null, "campingAvailable": false,
+    "gazeboBookingOpen": "TBC",
+    "gazeboInfo": "Details TBC.",
+    "travelTip": "Details TBC.",
+    "practiceInfo": "Practice date and booking details TBC.",
+    "website": "", "facebook": "",
+    "status": "upcoming",
+    "isNatChamps": true
+  },
+  {
+    "id": 12, "round": 12, "weekend": "britishchamps-2026",
+    "venue": "Manchester BMX Club (Platt Fields)", "city": "Manchester",
+    "date": "2026-08-30", "practiceDate": null, "ageGroups": "13 & Over",
+    "parkingOpen": null, "campingAvailable": false,
+    "gazeboBookingOpen": "TBC",
+    "gazeboInfo": "Details TBC.",
+    "travelTip": "Details TBC.",
+    "practiceInfo": "Practice date and booking details TBC.",
+    "website": "", "facebook": "",
+    "status": "upcoming",
+    "isNatChamps": true
   }
 ]

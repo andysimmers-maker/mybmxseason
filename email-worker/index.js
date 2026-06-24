@@ -79,6 +79,22 @@ export default {
     if (url.searchParams.get("key") !== env.ADMIN_KEY) {
       return new Response("Not found", { status: 404 });
     }
+
+    // Hit by a Supabase database webhook (insert on `submissions`) — set this URL
+    // with ?key=<ADMIN_KEY> as the webhook target so a new submission emails the admin.
+    if (url.pathname === "/notify-submission" && request.method === "POST") {
+      const body = await request.json();
+      const record = body.record || {};
+      const html = `
+        <p>New <strong>${record.type || "submission"}</strong> awaiting review.</p>
+        <p>Target: ${record.target_key || "—"}</p>
+        <pre>${JSON.stringify(record.payload || {}, null, 2)}</pre>
+        <p><a href="https://mybmxseason.co.uk">Open My BMX Season</a></p>
+      `;
+      const sent = await sendEmail(env, "andy.simmers@gmail.com", "New My BMX Season submission", html);
+      return new Response(sent ? "ok" : "send failed", { status: sent ? 200 : 502 });
+    }
+
     const nowParam = url.searchParams.get("now");
     const now = nowParam ? new Date(nowParam) : new Date();
     const summary = await runDigest(env, now);

@@ -58,6 +58,42 @@ const CATEGORY_COLORS = {
   travel: COLORS.blueText,
 };
 
+const ADMIN_EMAIL = "andy.simmers@gmail.com";
+
+const inputStyle = {
+  width: "100%", background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+  borderRadius: 6, padding: "8px 10px", fontSize: 13, color: COLORS.textPrimary,
+  boxSizing: "border-box", fontFamily: "inherit",
+};
+
+const SUBMISSION_TYPES = [
+  { key: "club_race", label: "New club race" },
+  { key: "training_session", label: "New training session" },
+  { key: "deadline_update", label: "Correct a national deadline" },
+];
+
+const DEADLINE_FIELD_OPTIONS = [
+  { key: "parkingOpen", label: "Parking booking opens" },
+  { key: "campingOpen", label: "Camping booking opens" },
+  { key: "gazeboBookingOpen", label: "Gazebo booking opens" },
+  { key: "practiceBookingOpen", label: "Practice booking opens" },
+];
+
+const SUBMISSION_STATUS_COLORS = {
+  pending: COLORS.yellow,
+  approved: COLORS.green,
+  rejected: COLORS.textMuted,
+};
+
+function FormField({ label, children }) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
 function CoachingView() {
   const [filterCoach, setFilterCoach] = useState("All");
   const now = new Date();
@@ -329,12 +365,13 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
   );
 }
 
-function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myRounds, toggleMyRound, bookings, updateBooking }) {
+function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myRounds, toggleMyRound, bookings, updateBooking, pendingFields, onSuggestCorrection }) {
   const isMine = myRounds && myRounds.has(weekend.weekendId);
   const accomKey = Object.keys(ACCOMMODATION_DATA).find(k =>
     k.split(",").map(Number).some(id => weekend.rounds.map(r => r.id).includes(id))
   );
   const accommodation = accomKey ? ACCOMMODATION_DATA[accomKey] : [];
+  const pending = pendingFields || new Set();
 
   const sections = [
     ...weekend.dates.map((date, i) => ({
@@ -344,15 +381,15 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
     })),
     { key: "practice", label: "Practice Day", date: weekend.practiceDate },
     ...(weekend.practiceBookingOpen ? [
-      { key: "practice_booking_open", label: "Practice Booking Opens", date: weekend.practiceBookingOpen, done: !!bookings.practice },
+      { key: "practice_booking_open", label: "Practice Booking Opens", date: weekend.practiceBookingOpen, done: !!bookings.practice, field: "practiceBookingOpen" },
     ] : []),
     { key: "entry", label: "Race Entry Closes", date: weekend.entryClose, done: !!bookings.entry },
-    { key: "parking_open", label: "Parking Booking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
+    { key: "parking_open", label: "Parking Booking Opens", date: weekend.parkingOpen, done: !!bookings.parking, field: "parkingOpen" },
     ...(weekend.campingAvailable ? [
-      { key: "camping_open", label: "Camping Booking Opens", date: weekend.campingOpen, done: !!bookings.hotel },
+      { key: "camping_open", label: "Camping Booking Opens", date: weekend.campingOpen, done: !!bookings.hotel, field: "campingOpen" },
     ] : []),
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
-      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo },
+      { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo, field: "gazeboBookingOpen" },
     ] : []),
   ];
 
@@ -511,7 +548,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
         );
       })()}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 12 }}>
         {sections.map(s => {
           const d = daysUntil(s.date);
           return (
@@ -521,10 +558,20 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
               {s.done && <div style={{ fontSize: 12, color: COLORS.green, fontWeight: 700 }}>✓ Done</div>}
               {!s.done && d >= 0 && <div style={{ fontSize: 12, color: d <= 7 ? COLORS.redText : COLORS.textSecondary, fontWeight: 700 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d} days`}</div>}
               {!s.done && d < 0 && <div style={{ fontSize: 11, color: COLORS.textMuted }}>Passed</div>}
+              {s.field && pending.has(s.field) && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.yellow, marginTop: 4 }}>Update pending review</div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {onSuggestCorrection && (
+        <button type="button" onClick={onSuggestCorrection} style={{
+          background: "none", border: "none", color: COLORS.blueText, cursor: "pointer",
+          fontSize: 12, padding: 0, marginBottom: 24, textDecoration: "underline",
+        }}>Spotted a wrong date above? Suggest a correction</button>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
@@ -869,6 +916,240 @@ function ClubRaceDetail({ event, onBack, myRounds, toggleMyRound }) {
   );
 }
 
+function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPrefill }) {
+  const [type, setType] = useState(prefillEventKey ? "deadline_update" : "club_race");
+  const [status, setStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [clubRace, setClubRace] = useState({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+  const [training, setTraining] = useState({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
+  const [deadline, setDeadline] = useState({ eventKey: prefillEventKey || "", field: "parkingOpen", newDate: "", note: "" });
+
+  useEffect(() => {
+    if (prefillEventKey) {
+      setType("deadline_update");
+      setDeadline(d => ({ ...d, eventKey: prefillEventKey }));
+    }
+  }, [prefillEventKey]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setStatus(null);
+
+    let payload, targetKey = null;
+    if (type === "club_race") {
+      if (!clubRace.club || !clubRace.date) {
+        setStatus({ kind: "error", message: "Club and date are required." });
+        return;
+      }
+      payload = { ...clubRace, round: clubRace.round ? Number(clubRace.round) : null };
+    } else if (type === "training_session") {
+      if (!training.weekendId || !training.venue || !training.date || !training.time) {
+        setStatus({ kind: "error", message: "Weekend, venue, date and time are required." });
+        return;
+      }
+      const weekend = WEEKENDS.find(w => w.weekendId === training.weekendId);
+      const { weekendId, ...rest } = training;
+      payload = { ...rest, roundIds: weekend ? weekend.rounds.map(r => r.id) : [] };
+      targetKey = weekendId;
+    } else {
+      if (!deadline.eventKey || !deadline.newDate) {
+        setStatus({ kind: "error", message: "Event and new date are required." });
+        return;
+      }
+      payload = { field: deadline.field, newDate: deadline.newDate, note: deadline.note };
+      targetKey = deadline.eventKey;
+    }
+
+    setSubmitting(true);
+    try {
+      await addSubmission(type, targetKey, payload);
+      setStatus({ kind: "success", message: "Thanks — submitted for review." });
+      setClubRace({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+      setTraining({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
+      setDeadline({ eventKey: "", field: "parkingOpen", newDate: "", note: "" });
+      if (onClearPrefill) onClearPrefill();
+    } catch (err) {
+      setStatus({ kind: "error", message: "Couldn't submit — check your connection and try again." });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const selectedDeadlineEvent = WEEKENDS.find(w => w.weekendId === deadline.eventKey);
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+        Submit an update
+      </div>
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {SUBMISSION_TYPES.map(t => (
+            <button key={t.key} type="button" onClick={() => setType(t.key)} style={{
+              background: type === t.key ? `${COLORS.red}22` : COLORS.surface,
+              border: `1px solid ${type === t.key ? COLORS.red : COLORS.border}`,
+              color: type === t.key ? COLORS.redText : COLORS.textSecondary,
+              borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 500,
+            }}>{t.label}</button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {type === "club_race" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
+              <FormField label="Club name"><input style={inputStyle} value={clubRace.club} onChange={e => setClubRace({ ...clubRace, club: e.target.value })} /></FormField>
+              <FormField label="Series name"><input style={inputStyle} value={clubRace.series} onChange={e => setClubRace({ ...clubRace, series: e.target.value })} /></FormField>
+              <FormField label="Round number"><input type="number" style={inputStyle} value={clubRace.round} onChange={e => setClubRace({ ...clubRace, round: e.target.value })} /></FormField>
+              <FormField label="Date"><input type="date" style={inputStyle} value={clubRace.date} onChange={e => setClubRace({ ...clubRace, date: e.target.value })} /></FormField>
+              <FormField label="Website"><input style={inputStyle} value={clubRace.website} onChange={e => setClubRace({ ...clubRace, website: e.target.value })} /></FormField>
+              <FormField label="Facebook"><input style={inputStyle} value={clubRace.facebook} onChange={e => setClubRace({ ...clubRace, facebook: e.target.value })} /></FormField>
+              <FormField label="Instagram"><input style={inputStyle} value={clubRace.instagram} onChange={e => setClubRace({ ...clubRace, instagram: e.target.value })} /></FormField>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <FormField label="Notes"><input style={inputStyle} value={clubRace.notes} onChange={e => setClubRace({ ...clubRace, notes: e.target.value })} /></FormField>
+              </div>
+            </div>
+          )}
+
+          {type === "training_session" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
+              <FormField label="National weekend">
+                <select style={inputStyle} value={training.weekendId} onChange={e => setTraining({ ...training, weekendId: e.target.value })}>
+                  <option value="">Select a weekend…</option>
+                  {WEEKENDS.map(w => <option key={w.weekendId} value={w.weekendId}>{w.city} — {w.dates.map(formatDate).join(" & ")}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Venue"><input style={inputStyle} value={training.venue} onChange={e => setTraining({ ...training, venue: e.target.value })} /></FormField>
+              <FormField label="Date"><input type="date" style={inputStyle} value={training.date} onChange={e => setTraining({ ...training, date: e.target.value })} /></FormField>
+              <FormField label="Time"><input type="time" style={inputStyle} value={training.time} onChange={e => setTraining({ ...training, time: e.target.value })} /></FormField>
+              <FormField label="Coach"><input style={inputStyle} value={training.coach} onChange={e => setTraining({ ...training, coach: e.target.value })} /></FormField>
+              <FormField label="Host organisation"><input style={inputStyle} value={training.host} onChange={e => setTraining({ ...training, host: e.target.value })} /></FormField>
+              <FormField label="Booking platform">
+                <select style={inputStyle} value={training.bookingPlatform} onChange={e => setTraining({ ...training, bookingPlatform: e.target.value })}>
+                  <option value="Spond">Spond</option>
+                  <option value="Website">Website</option>
+                </select>
+              </FormField>
+              <FormField label="Booking URL"><input style={inputStyle} value={training.bookingUrl} onChange={e => setTraining({ ...training, bookingUrl: e.target.value })} /></FormField>
+              <FormField label="Age groups"><input style={inputStyle} value={training.ageGroups} onChange={e => setTraining({ ...training, ageGroups: e.target.value })} /></FormField>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <FormField label="Notes"><input style={inputStyle} value={training.notes} onChange={e => setTraining({ ...training, notes: e.target.value })} /></FormField>
+              </div>
+            </div>
+          )}
+
+          {type === "deadline_update" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
+              <FormField label="National weekend">
+                <select style={inputStyle} value={deadline.eventKey} onChange={e => setDeadline({ ...deadline, eventKey: e.target.value })}>
+                  <option value="">Select a weekend…</option>
+                  {WEEKENDS.map(w => <option key={w.weekendId} value={w.weekendId}>{w.city} — {w.dates.map(formatDate).join(" & ")}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Which deadline">
+                <select style={inputStyle} value={deadline.field} onChange={e => setDeadline({ ...deadline, field: e.target.value })}>
+                  {DEADLINE_FIELD_OPTIONS.filter(f => f.key !== "campingOpen" || !selectedDeadlineEvent || selectedDeadlineEvent.campingAvailable).map(f => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="New date"><input type="date" style={inputStyle} value={deadline.newDate} onChange={e => setDeadline({ ...deadline, newDate: e.target.value })} /></FormField>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <FormField label="Source / note (optional)"><input style={inputStyle} value={deadline.note} onChange={e => setDeadline({ ...deadline, note: e.target.value })} /></FormField>
+              </div>
+            </div>
+          )}
+
+          {status && (
+            <div style={{ fontSize: 13, color: status.kind === "error" ? COLORS.redText : COLORS.green, marginBottom: 12 }}>
+              {status.message}
+            </div>
+          )}
+
+          <button type="submit" disabled={submitting} style={{
+            background: COLORS.red, color: "#fff", border: "none", borderRadius: 8,
+            padding: "10px 20px", cursor: submitting ? "default" : "pointer", fontSize: 13, fontWeight: 600,
+            opacity: submitting ? 0.6 : 1,
+          }}>
+            {submitting ? "Submitting…" : "Submit for review"}
+          </button>
+        </form>
+      </div>
+
+      {mySubmissions.length > 0 && (
+        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+            Your submissions
+          </div>
+          {mySubmissions.map(s => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${COLORS.border}` }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+                color: SUBMISSION_STATUS_COLORS[s.status], border: `1px solid ${SUBMISSION_STATUS_COLORS[s.status]}55`,
+                borderRadius: 10, padding: "2px 8px", flexShrink: 0,
+              }}>{s.status}</div>
+              <div style={{ flex: 1, fontSize: 13, color: COLORS.textPrimary }}>
+                {SUBMISSION_TYPES.find(t => t.key === s.type)?.label}
+                {s.payload?.club ? ` — ${s.payload.club}` : ""}
+                {s.payload?.venue ? ` — ${s.payload.venue}` : ""}
+                {s.type === "deadline_update" ? ` — ${DEADLINE_FIELD_OPTIONS.find(f => f.key === s.payload.field)?.label || s.payload.field}` : ""}
+              </div>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, flexShrink: 0 }}>{formatDate(s.created_at.slice(0, 10))}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminReviewView({ pendingSubmissions, reviewSubmission }) {
+  function jsonSnippet(s) {
+    if (s.type === "club_race") {
+      return JSON.stringify({ id: "<next id>", ...s.payload }, null, 2);
+    }
+    if (s.type === "training_session") {
+      return JSON.stringify({ id: "<next id>", ...s.payload }, null, 2);
+    }
+    return `seasons.json round(s) for "${s.target_key}": set "${s.payload.field}" to "${s.payload.newDate}"`;
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+        Pending submissions ({pendingSubmissions.length})
+      </div>
+      {pendingSubmissions.length === 0 && (
+        <div style={{ color: COLORS.textMuted, fontSize: 13, padding: 24, textAlign: "center" }}>Nothing waiting for review.</div>
+      )}
+      {pendingSubmissions.map(s => (
+        <div key={s.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
+              {SUBMISSION_TYPES.find(t => t.key === s.type)?.label}
+            </div>
+            <div style={{ fontSize: 11, color: COLORS.textMuted }}>{formatDate(s.created_at.slice(0, 10))}</div>
+          </div>
+          <pre style={{
+            background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 6,
+            padding: 12, fontSize: 12, color: COLORS.textPrimary, overflowX: "auto", marginBottom: 12,
+          }}>{jsonSnippet(s)}</pre>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => reviewSubmission(s.id, "approved")} style={{
+              background: `${COLORS.green}22`, border: `1px solid ${COLORS.green}`, color: COLORS.green,
+              borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+            }}>Approve</button>
+            <button onClick={() => reviewSubmission(s.id, "rejected")} style={{
+              background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary,
+              borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+            }}>Reject</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
   const now = new Date();
   const [filterType, setFilterType] = useState("All");
@@ -1007,6 +1288,8 @@ export default function App() {
   const [bookings, setBookings] = useState({});
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [submitPrefillEventKey, setSubmitPrefillEventKey] = useState(null);
 
   const loadedUserId = useRef(null);
 
@@ -1029,7 +1312,7 @@ export default function App() {
         }
       } else {
         loadedUserId.current = null;
-        setMyRounds(new Set()); setBookings({}); setChecklist({}); setNotificationsEnabled(false);
+        setMyRounds(new Set()); setBookings({}); setChecklist({}); setNotificationsEnabled(false); setSubmissions([]);
       }
     });
 
@@ -1038,13 +1321,14 @@ export default function App() {
 
   async function loadUserData(userId) {
     try {
-      const [roundsRes, bookingsRes, checklistRes, settingsRes] = await Promise.all([
+      const [roundsRes, bookingsRes, checklistRes, settingsRes, submissionsRes] = await Promise.all([
         supabase.from("user_rounds").select("weekend_id").eq("user_id", userId),
         supabase.from("user_bookings").select("weekend_id, data").eq("user_id", userId),
         supabase.from("user_checklist").select("weekend_id, data").eq("user_id", userId),
         supabase.from("user_settings").select("email_notifications").eq("user_id", userId).maybeSingle(),
+        supabase.from("submissions").select("*").order("created_at", { ascending: false }),
       ]);
-      const firstError = [roundsRes, bookingsRes, checklistRes, settingsRes].find(r => r.error)?.error;
+      const firstError = [roundsRes, bookingsRes, checklistRes, settingsRes, submissionsRes].find(r => r.error)?.error;
       if (firstError) throw firstError;
       if (roundsRes.data) setMyRounds(new Set(roundsRes.data.map(r => r.weekend_id)));
       if (bookingsRes.data) {
@@ -1058,9 +1342,28 @@ export default function App() {
         setChecklist(c);
       }
       setNotificationsEnabled(!!settingsRes.data?.email_notifications);
+      if (submissionsRes.data) setSubmissions(submissionsRes.data);
     } catch (err) {
       setSaveError("Couldn't load your season data — try refreshing the page.");
     }
+  }
+
+  async function addSubmission(type, targetKey, payload) {
+    const { data, error } = await supabase.from("submissions")
+      .insert({ user_id: session.user.id, type, target_key: targetKey, payload })
+      .select()
+      .single();
+    if (error) throw error;
+    setSubmissions(prev => [data, ...prev]);
+  }
+
+  function reviewSubmission(id, status) {
+    const previous = submissions;
+    setSubmissions(prev => prev.map(s => (s.id === id ? { ...s, status } : s)));
+    supabase.from("submissions").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id)
+      .then(({ error }) => {
+        if (error) { setSubmissions(previous); setSaveError("Couldn't save that change — check your connection and try again."); }
+      }).catch(() => { setSubmissions(previous); setSaveError("Couldn't save that change — check your connection and try again."); });
   }
 
   function toggleNotifications() {
@@ -1133,10 +1436,21 @@ export default function App() {
     ).then(({ error }) => { if (error) revert(); }).catch(revert);
   }
 
+  const isAdmin = session?.user?.email === ADMIN_EMAIL;
+  const mySubmissions = session ? submissions.filter(s => s.user_id === session.user.id) : [];
+  const pendingDeadlineFields = new Map();
+  submissions.filter(s => s.status === "pending" && s.type === "deadline_update").forEach(s => {
+    if (!pendingDeadlineFields.has(s.target_key)) pendingDeadlineFields.set(s.target_key, new Set());
+    pendingDeadlineFields.get(s.target_key).add(s.payload.field);
+  });
+  const pendingSubmissions = submissions.filter(s => s.status === "pending");
+
   const navItems = [
     { key: "dashboard", label: "Dashboard" },
     { key: "calendar", label: "Calendar" },
     { key: "coaching", label: "Coaching" },
+    { key: "submit", label: "Submit" },
+    ...(isAdmin ? [{ key: "review", label: `Review${pendingSubmissions.length ? ` (${pendingSubmissions.length})` : ""}` }] : []),
   ];
 
   if (authLoading) return (
@@ -1252,11 +1566,22 @@ export default function App() {
               toggleMyRound={toggleMyRound}
               bookings={bookings[selectedWeekend.weekendId] || {}}
               updateBooking={(key, value) => updateBooking(selectedWeekend.weekendId, key, value)}
+              pendingFields={pendingDeadlineFields.get(selectedWeekend.weekendId) || new Set()}
+              onSuggestCorrection={() => { setSubmitPrefillEventKey(selectedWeekend.weekendId); setView("submit"); setSelectedWeekend(null); }}
             />
           : view === "calendar"
           ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings} />
           : view === "coaching"
           ? <CoachingView />
+          : view === "submit"
+          ? <SubmitView
+              addSubmission={addSubmission}
+              mySubmissions={mySubmissions}
+              prefillEventKey={submitPrefillEventKey}
+              onClearPrefill={() => setSubmitPrefillEventKey(null)}
+            />
+          : view === "review" && isAdmin
+          ? <AdminReviewView pendingSubmissions={pendingSubmissions} reviewSubmission={reviewSubmission} />
           : <Dashboard onSelectWeekend={handleSelectWeekend} onGoToCalendar={() => setView("calendar")} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings} />
         }
       </div>

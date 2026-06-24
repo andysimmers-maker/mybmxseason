@@ -15,6 +15,9 @@ export const WEEKENDS = (() => {
     roundNumbers: rounds.map(r => r.round),
     dates: rounds.map(r => r.date),
     isNatChamps: rounds.some(r => r.isNatChamps),
+    // Race registration is the one time-critical entry deadline — it closes the
+    // Monday before practice day, so it's derived rather than hand-maintained per round.
+    registrationClose: rounds[0].practiceDate ? mondayBefore(rounds[0].practiceDate) : null,
   }));
 })();
 
@@ -47,6 +50,16 @@ export function dayBefore(dateStr) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+export function mondayBefore(dateStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
+  do {
+    d.setDate(d.getDate() - 1);
+  } while (d.getDay() !== 1);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function eventDate(e) {
   return e.type === "national" ? e.dates[0] : e.date;
 }
@@ -65,9 +78,9 @@ export function eventLabel(e) {
 // city-prefixed labels (Dashboard/email digest) and the short labels (Calendar cards),
 // so adding/removing a deadline only needs updating in one place.
 const NATIONAL_DEADLINE_FIELDS = [
-  { bookingKey: "entry", dateField: "entryClose", shortLabel: "Entries close" },
+  { bookingKey: "entry", dateField: "registrationClose", shortLabel: "Race registration closes" },
   { bookingKey: "parking", dateField: "parkingOpen", shortLabel: "Parking opens" },
-  { bookingKey: "practice", dateField: "practiceBookingClose", shortLabel: "Practice booking closes" },
+  { bookingKey: "practice", dateField: "practiceBookingOpen", shortLabel: "Practice booking opens" },
   { bookingKey: "hotel", dateField: "campingOpen", shortLabel: "Camping opens", condition: e => e.campingAvailable },
   { bookingKey: "gazebo", dateField: "gazeboBookingOpen", shortLabel: "Gazebo booking opens", condition: e => e.gazeboBookingOpen !== "TBC" },
 ];
@@ -98,7 +111,6 @@ export function eventDeadlines(e, bookings) {
 export function eventCalendarItems(e, bookings) {
   if (e.type === "national") {
     const items = [
-      { label: "Entries open", date: e.entryOpen },
       ...nationalDeadlineItems(e, bookings),
       { label: "Practice", date: e.practiceDate },
       ...e.dates.map((date, i) => ({ label: e.dates.length > 1 ? `Day ${i + 1}` : "Race day", date })),
@@ -135,7 +147,7 @@ export function eventHeroTiles(e) {
       { label: "Practice", date: e.practiceDate },
       { label: "Day 1", date: e.dates[0] },
       { label: "Day 2", date: e.dates[1] },
-      { label: "Entries close", date: e.entryClose },
+      { label: "Registration closes", date: e.registrationClose },
     ].filter(t => t.date);
   }
   if (e.type === "north") {

@@ -342,9 +342,11 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
       label: weekend.dates.length > 1 ? `Race Day ${i + 1}` : "Race Day",
       date,
     })),
-    { key: "practice", label: "Practice Day", date: weekend.practiceDate, done: !!bookings.practice },
-    { key: "entry_open", label: "Entries Open", date: weekend.entryOpen },
-    { key: "entry_close", label: "Entries Close", date: weekend.entryClose, done: !!bookings.entry },
+    { key: "practice", label: "Practice Day", date: weekend.practiceDate },
+    ...(weekend.practiceBookingOpen ? [
+      { key: "practice_booking_open", label: "Practice Booking Opens", date: weekend.practiceBookingOpen, done: !!bookings.practice },
+    ] : []),
+    { key: "registration", label: "Race Registration", date: weekend.registrationClose, done: !!bookings.entry },
     { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
     ...(weekend.campingAvailable ? [
       { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen, done: !!bookings.hotel },

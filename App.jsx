@@ -1150,7 +1150,7 @@ export default function App() {
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 40, width: "100%", maxWidth: 380, textAlign: "center" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 32, height: 32, background: COLORS.red, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff" }}>B</div>
+          <img src="/logo.png" alt="" width={32} height={32} style={{ borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>My BMX Season</span>
         </div>
         <button
@@ -1179,7 +1179,7 @@ export default function App() {
         height: 56, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 28, height: 28, background: COLORS.red, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#fff" }}>B</div>
+          <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.3 }}>My BMX Season</span>
         </div>
         <div className="app-header-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>

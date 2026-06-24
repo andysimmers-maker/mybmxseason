@@ -15,9 +15,9 @@ export const WEEKENDS = (() => {
     roundNumbers: rounds.map(r => r.round),
     dates: rounds.map(r => r.date),
     isNatChamps: rounds.some(r => r.isNatChamps),
-    // Race registration is the one time-critical entry deadline — it closes the
+    // Race entry is the one time-critical entry deadline — it closes the
     // Monday before practice day, so it's derived rather than hand-maintained per round.
-    registrationClose: rounds[0].practiceDate ? mondayBefore(rounds[0].practiceDate) : null,
+    entryClose: rounds[0].practiceDate ? mondayBefore(rounds[0].practiceDate) : null,
   }));
 })();
 
@@ -78,10 +78,10 @@ export function eventLabel(e) {
 // city-prefixed labels (Dashboard/email digest) and the short labels (Calendar cards),
 // so adding/removing a deadline only needs updating in one place.
 const NATIONAL_DEADLINE_FIELDS = [
-  { bookingKey: "entry", dateField: "registrationClose", shortLabel: "Race registration closes" },
-  { bookingKey: "parking", dateField: "parkingOpen", shortLabel: "Parking opens" },
+  { bookingKey: "entry", dateField: "entryClose", shortLabel: "Race entry closes" },
+  { bookingKey: "parking", dateField: "parkingOpen", shortLabel: "Parking booking opens" },
   { bookingKey: "practice", dateField: "practiceBookingOpen", shortLabel: "Practice booking opens" },
-  { bookingKey: "hotel", dateField: "campingOpen", shortLabel: "Camping opens", condition: e => e.campingAvailable },
+  { bookingKey: "hotel", dateField: "campingOpen", shortLabel: "Camping booking opens", condition: e => e.campingAvailable },
   { bookingKey: "gazebo", dateField: "gazeboBookingOpen", shortLabel: "Gazebo booking opens", condition: e => e.gazeboBookingOpen !== "TBC" },
 ];
 
@@ -147,7 +147,7 @@ export function eventHeroTiles(e) {
       { label: "Practice", date: e.practiceDate },
       { label: "Day 1", date: e.dates[0] },
       { label: "Day 2", date: e.dates[1] },
-      { label: "Registration closes", date: e.registrationClose },
+      { label: "Entry closes", date: e.entryClose },
     ].filter(t => t.date);
   }
   if (e.type === "north") {

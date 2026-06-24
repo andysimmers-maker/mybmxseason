@@ -346,10 +346,10 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
     ...(weekend.practiceBookingOpen ? [
       { key: "practice_booking_open", label: "Practice Booking Opens", date: weekend.practiceBookingOpen, done: !!bookings.practice },
     ] : []),
-    { key: "registration", label: "Race Registration", date: weekend.registrationClose, done: !!bookings.entry },
-    { key: "parking_open", label: "Parking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
+    { key: "entry", label: "Race Entry Closes", date: weekend.entryClose, done: !!bookings.entry },
+    { key: "parking_open", label: "Parking Booking Opens", date: weekend.parkingOpen, done: !!bookings.parking },
     ...(weekend.campingAvailable ? [
-      { key: "camping_open", label: "Camping Opens", date: weekend.campingOpen, done: !!bookings.hotel },
+      { key: "camping_open", label: "Camping Booking Opens", date: weekend.campingOpen, done: !!bookings.hotel },
     ] : []),
     ...(weekend.gazeboBookingOpen && weekend.gazeboBookingOpen !== "TBC" ? [
       { key: "gazebo_open", label: "Gazebo Booking Opens", date: weekend.gazeboBookingOpen, done: !!bookings.gazebo },
@@ -424,7 +424,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
           { key: "entry", label: "Race entry submitted" },
           { key: "parking", label: "Parking booked" },
           { key: "gazebo", label: "Gazebo booked", showIf: !!weekend.gazeboBookingOpen },
-          { key: "hotel", label: "Accommodation booked", hasDetails: true },
+          { key: "hotel", label: weekend.campingAvailable ? "Camping/accommodation booked" : "Accommodation booked", hasDetails: true },
           { key: "practice", label: "Practice session booked" },
         ].filter(i => i.showIf !== false);
 

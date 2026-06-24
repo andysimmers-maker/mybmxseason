@@ -1496,20 +1496,21 @@ export default function App() {
           <img src="/logo.png" alt="" width={28} height={28} style={{ borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.3 }}>My BMX Season</span>
         </div>
-        <div className="app-header-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", gap: 4 }}>
+        <div className="app-header-right" style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <div className="nav-scroll" style={{ display: "flex", gap: 4, overflowX: "auto", flexShrink: 1, minWidth: 0 }}>
             {navItems.map(n => (
               <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
                 background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
                 border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
                 color: view === n.key && !selectedWeekend ? COLORS.redText : COLORS.textSecondary,
                 borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500,
+                whiteSpace: "nowrap", flexShrink: 0,
               }}>
                 {n.label}
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 12, borderLeft: `1px solid ${COLORS.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 12, borderLeft: `1px solid ${COLORS.border}`, flexShrink: 0 }}>
             <button onClick={toggleNotifications} title="Email reminders the day before a deadline or race" style={{
               background: notificationsEnabled ? `${COLORS.blue}22` : "none",
               border: `1px solid ${notificationsEnabled ? COLORS.blue : COLORS.border}`,

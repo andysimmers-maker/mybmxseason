@@ -1154,30 +1154,16 @@ function AdminReviewView({ pendingSubmissions, reviewSubmission }) {
 function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
   const now = new Date();
   const [filterType, setFilterType] = useState("All");
+  const [pastExpanded, setPastExpanded] = useState(false);
   const filterChips = ["All", "National", "North Region", "Club"];
   const filtered = [...ALL_EVENTS]
     .filter(e => filterType === "All" || EVENT_TYPE_LABELS[e.type] === filterType)
     .sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b)));
 
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>2026 Race Calendar</div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {filterChips.map(c => (
-            <button key={c} onClick={() => setFilterType(c)} style={{
-              background: filterType === c ? `${COLORS.red}22` : COLORS.surface,
-              border: `1px solid ${filterType === c ? COLORS.red : COLORS.border}`,
-              color: filterType === c ? COLORS.redText : COLORS.textSecondary,
-              borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 500,
-            }}>
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
+  const upcomingEvents = filtered.filter(e => new Date(eventEndDate(e)) >= now);
+  const pastEvents = filtered.filter(e => new Date(eventEndDate(e)) < now);
 
-      {filtered.map(e => {
+  const renderEventCard = (e) => {
         const past = new Date(eventEndDate(e)) < now;
         const isMine = myRounds && myRounds.has(e.key);
         const isTbc = e.type === "north" && e.status === "tbc";
@@ -1273,7 +1259,43 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
             )}
           </div>
         );
-      })}
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>2026 Race Calendar</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {filterChips.map(c => (
+            <button key={c} onClick={() => setFilterType(c)} style={{
+              background: filterType === c ? `${COLORS.red}22` : COLORS.surface,
+              border: `1px solid ${filterType === c ? COLORS.red : COLORS.border}`,
+              color: filterType === c ? COLORS.redText : COLORS.textSecondary,
+              borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 500,
+            }}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {upcomingEvents.map(e => renderEventCard(e))}
+
+      {pastEvents.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <button onClick={() => setPastExpanded(v => !v)} style={{
+            display: "flex", alignItems: "center", gap: 8, width: "100%",
+            background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 10,
+            padding: "12px 16px", cursor: "pointer", marginBottom: pastExpanded ? 12 : 0,
+          }}>
+            <span style={{ fontSize: 12, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, flex: 1, textAlign: "left" }}>
+              Past Events ({pastEvents.length})
+            </span>
+            <span style={{ fontSize: 14, color: COLORS.textMuted }}>{pastExpanded ? "▲" : "▼"}</span>
+          </button>
+          {pastExpanded && pastEvents.map(e => renderEventCard(e))}
+        </div>
+      )}
     </div>
   );
 }

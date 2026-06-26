@@ -271,34 +271,72 @@ function Dashboard({ onSelectWeekend, onGoToCalendar, myRounds, toggleMyRound, b
           background: `${COLORS.blue}0d`, border: `1px solid ${COLORS.blue}44`,
           borderRadius: 12, padding: 20, marginBottom: 16,
         }}>
-          <div style={{ fontSize: 12, color: COLORS.blueText, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: COLORS.blueText, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             My Season — {myEventsList.length} event{myEventsList.length > 1 ? "s" : ""}
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: myDeadlines.length > 0 ? 14 : 0 }}>
-            {myEventsList.map(e => {
-              const days = daysUntil(eventDate(e));
-              const badge = e.type === "national" ? `R${e.roundNumbers.join("&")}`
-                : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
-                : "CLUB";
-              const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
-              return (
-                <button type="button" key={e.key} onClick={() => onSelectWeekend(e)} style={{
-                  background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
-                  borderRadius: 8, padding: "8px 14px", cursor: "pointer", textAlign: "center",
-                  font: "inherit", color: "inherit",
-                }}>
-                  <div style={{ fontSize: 11, color: COLORS.blueText, fontWeight: 700, marginBottom: 2 }}>{badge}</div>
-                  <div style={{ fontSize: 12, color: COLORS.textPrimary, fontWeight: 600 }}>{title}</div>
-                  <div style={{ fontSize: 11, color: days <= 14 ? COLORS.redText : COLORS.textSecondary, fontWeight: days <= 14 ? 700 : 400 }}>
-                    {days === 0 ? "Today" : `${days}d`}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          {(() => {
+            const monthGroups = [];
+            const monthMap = new Map();
+            myEventsList.forEach(e => {
+              const d = eventDate(e);
+              const [year, month] = d.split("-").map(Number);
+              const key = `${year}-${String(month).padStart(2, "0")}`;
+              if (!monthMap.has(key)) {
+                const label = new Date(year, month - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+                monthMap.set(key, { label, events: [] });
+                monthGroups.push(monthMap.get(key));
+              }
+              monthMap.get(key).events.push(e);
+            });
+            return monthGroups.map((group, gi) => (
+              <div key={group.label} style={{ marginBottom: gi < monthGroups.length - 1 ? 14 : 0 }}>
+                <div style={{ fontSize: 10, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
+                  {group.label}
+                </div>
+                {group.events.map(e => {
+                  const days = daysUntil(eventDate(e));
+                  const badge = e.type === "national" ? `R${e.roundNumbers.join("&")}`
+                    : e.type === "north" ? (e.round ? `NR${e.round}` : "CC")
+                    : "CLUB";
+                  const title = e.type === "national" ? e.city : e.type === "north" ? e.location : e.club;
+                  const start = eventDate(e);
+                  const end = eventEndDate(e);
+                  let dateStr;
+                  if (start === end) {
+                    dateStr = formatDate(start);
+                  } else {
+                    const [sy, sm, sd] = start.split("-").map(Number);
+                    const [ey, em, ed] = end.split("-").map(Number);
+                    const mon = new Date(ey, em - 1, 1).toLocaleDateString("en-GB", { month: "short" });
+                    dateStr = sm === em ? `${sd}–${ed} ${mon} ${ey}` : `${formatDate(start)} – ${formatDate(end)}`;
+                  }
+                  return (
+                    <button type="button" key={e.key} onClick={() => onSelectWeekend(e)} style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      background: COLORS.card, border: `1px solid ${COLORS.blue}55`,
+                      borderRadius: 8, padding: "10px 14px", cursor: "pointer",
+                      textAlign: "left", font: "inherit", color: "inherit", marginBottom: 6,
+                    }}>
+                      <div style={{
+                        fontSize: 10, color: COLORS.blueText, fontWeight: 700, flexShrink: 0,
+                        background: `${COLORS.blue}22`, borderRadius: 4, padding: "2px 6px",
+                      }}>{badge}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: COLORS.textPrimary, fontWeight: 600 }}>{title}</div>
+                        <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{dateStr}</div>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: days <= 14 ? COLORS.redText : COLORS.textSecondary, flexShrink: 0 }}>
+                        {days === 0 ? "Today" : `${days}d`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ));
+          })()}
           {myDeadlines.length > 0 && (
             <>
-              <div style={{ fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Your next deadlines</div>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Your next deadlines</div>
               {myDeadlines.slice(0, 4).map((d, i) => (
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: 10, padding: "7px 0",

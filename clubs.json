@@ -1,5 +1,60 @@
 [
   {
+    "id": "blackpool-bmx",
+    "name": "Blackpool BMX Club",
+    "address": "East Park Drive, Stanley Park, Blackpool FY3 9RB",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Stanley+Park+BMX+Track,+East+Park+Drive,+Blackpool+FY3+9RB",
+    "isOpenTrack": false,
+    "website": "https://www.blackpoolbmxclub.com/",
+    "facebook": "https://www.facebook.com/groups/blackpoolBMXclub/",
+    "instagram": "https://www.instagram.com/blackpoolbmxclub/",
+    "sessions": []
+  },
+  {
+    "id": "bradford-bandits",
+    "name": "Bradford Bandits BMX Racing Club",
+    "address": "Peel Park BMX Track, Cliffe Road, Bradford BD3 0NF",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Peel+Park+BMX+Track,+Cliffe+Road,+Bradford+BD3+0NF",
+    "isOpenTrack": false,
+    "website": "https://www.bradfordbanditsbmx.co.uk/",
+    "facebook": "https://www.facebook.com/BradfordBMXBandits",
+    "instagram": "https://www.instagram.com/bradfordbanditsbmx/",
+    "sessions": []
+  },
+  {
+    "id": "bruntwood-park-bmx",
+    "name": "Bruntwood Park BMX Club",
+    "address": "Bruntwood Lane, Bruntwood Park, Cheadle SK8 1HX",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bruntwood+Lane,+Bruntwood+Park,+Cheadle+SK8+1HX",
+    "isOpenTrack": false,
+    "website": "https://bpbmxclub.org.uk/",
+    "facebook": "https://www.facebook.com/bpbmxclub/",
+    "instagram": "https://www.instagram.com/bpbmxclub/",
+    "sessions": []
+  },
+  {
+    "id": "cheshire-ghost-riders",
+    "name": "Cheshire Ghost Riders BMX Club",
+    "address": "Shanaze Reade BMX Track, Tipkinder Park, Crewe",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Shanaze+Reade+BMX+Track,+Tipkinder+Park,+Crewe",
+    "isOpenTrack": false,
+    "website": "https://www.cgrbmxclub.co.uk/",
+    "facebook": "https://www.facebook.com/CheshireGhostRidersBMXClub/",
+    "instagram": "https://www.instagram.com/cgrbmxclub/",
+    "sessions": []
+  },
+  {
+    "id": "manchester-bmx",
+    "name": "Manchester BMX Club",
+    "address": "Platt Fields Park, Mabfield Road, Fallowfield, Manchester M14 6LN",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Platt+Fields+Park,+Mabfield+Road,+Fallowfield,+Manchester+M14+6LN",
+    "isOpenTrack": false,
+    "website": "https://www.manchesterbmx.co.uk/",
+    "facebook": "https://www.facebook.com/manchesterbmxclub/",
+    "instagram": "https://www.instagram.com/mbmxclub/",
+    "sessions": []
+  },
+  {
     "id": "merseyside-bmx",
     "name": "Merseyside BMX Club",
     "address": "Knowsley Leisure and Culture Park, Longview Drive, Huyton, Liverpool, L36 6EG",
@@ -23,5 +78,38 @@
         "note": "Multiple levels from 17:15"
       }
     ]
+  },
+  {
+    "id": "mid-lancs-bmx",
+    "name": "Mid Lancs BMX",
+    "address": "Chisnall Lane, Coppull, near Chorley PR7 5EA",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Chisnall+Lane,+Coppull,+Chorley+PR7+5EA",
+    "isOpenTrack": false,
+    "website": "https://midlancsbmx.co.uk/",
+    "facebook": "https://www.facebook.com/p/Mid-Lancs-BMX-Club-100057829772566/",
+    "instagram": "https://www.instagram.com/midlancsbmx/",
+    "sessions": []
+  },
+  {
+    "id": "north-east-bmx",
+    "name": "North East BMX Club",
+    "address": "Summerhill Country Park, Hartlepool TS25 4LL",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Summerhill+Country+Park,+Hartlepool+TS25+4LL",
+    "isOpenTrack": false,
+    "website": "http://www.northeastbmx.co.uk/",
+    "facebook": "https://www.facebook.com/NorthEastBMXClub/",
+    "instagram": "https://www.instagram.com/north.east.bmx/",
+    "sessions": []
+  },
+  {
+    "id": "preston-pirates",
+    "name": "Preston Pirates BMX Club",
+    "address": "Fishwick Recreation Ground, London Road, Preston PR2 5NA",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Fishwick+Recreation+Ground,+London+Road,+Preston+PR2+5NA",
+    "isOpenTrack": false,
+    "website": "https://www.prestonpiratesbmxclub.com/",
+    "facebook": "https://www.facebook.com/pages/Preston-Pirates-Bmx-Club/111452588917886",
+    "instagram": "https://www.instagram.com/prestonpiratesbmxclub/",
+    "sessions": []
   }
 ]

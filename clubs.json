@@ -44,6 +44,17 @@
     "sessions": []
   },
   {
+    "id": "dragon-riders-bmx",
+    "name": "Dragon Riders BMX Club",
+    "address": "Marsh Tracks, Glan Y Morfa Industrial Estate, Marsh Road, Rhyl LL18 2AD",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Marsh+Tracks,+Glan+Y+Morfa+Industrial+Estate,+Marsh+Road,+Rhyl+LL18+2AD",
+    "isOpenTrack": false,
+    "website": "https://www.dragonridersbmxclubrhyl.co.uk/",
+    "facebook": null,
+    "instagram": "https://www.instagram.com/dragonridersbmx/",
+    "sessions": []
+  },
+  {
     "id": "manchester-bmx",
     "name": "Manchester BMX Club",
     "address": "Platt Fields Park, Mabfield Road, Fallowfield, Manchester M14 6LN",

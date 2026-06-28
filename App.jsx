@@ -1183,9 +1183,12 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
 }
 
 function ClubDetail({ club, onBack, onNavigateToRace }) {
+  const [pastExpanded, setPastExpanded] = useState(false);
   const northRaces = ALL_EVENTS.filter(e => e.type === "north" && e.clubId === club.id);
   const clubRacesList = ALL_EVENTS.filter(e => e.type === "club" && e.clubId === club.id);
   const allLinkedRaces = [...northRaces, ...clubRacesList].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b)));
+  const upcomingRaces = allLinkedRaces.filter(r => daysUntil(eventDate(r)) >= 0);
+  const pastRaces = allLinkedRaces.filter(r => daysUntil(eventDate(r)) < 0);
 
   return (
     <div>
@@ -1240,15 +1243,14 @@ function ClubDetail({ club, onBack, onNavigateToRace }) {
       {allLinkedRaces.length > 0 && (
         <div>
           <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Races at This Club</div>
-          {allLinkedRaces.map(race => {
+          {upcomingRaces.map(race => {
             const d = daysUntil(eventDate(race));
-            const isPast = d < 0;
             return (
               <button key={race.key} onClick={() => onNavigateToRace(race)} style={{
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                borderLeft: `4px solid ${isPast ? COLORS.textMuted : COLORS.red}`,
+                borderLeft: `4px solid ${COLORS.red}`,
                 borderRadius: 10, padding: "12px 16px", marginBottom: 8, cursor: "pointer",
-                width: "100%", textAlign: "left", opacity: isPast ? 0.5 : 1,
+                width: "100%", textAlign: "left",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
               }}>
                 <div>
@@ -1257,11 +1259,40 @@ function ClubDetail({ club, onBack, onNavigateToRace }) {
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{formatDate(eventDate(race))}</div>
                 </div>
-                {!isPast && <div style={{ fontSize: 12, fontWeight: 700, color: d <= 14 ? COLORS.redText : COLORS.textSecondary, flexShrink: 0 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</div>}
-                {isPast && <div style={{ fontSize: 11, color: COLORS.textMuted, flexShrink: 0 }}>Passed</div>}
+                <div style={{ fontSize: 12, fontWeight: 700, color: d <= 14 ? COLORS.redText : COLORS.textSecondary, flexShrink: 0 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</div>
               </button>
             );
           })}
+          {upcomingRaces.length === 0 && pastRaces.length > 0 && (
+            <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 10 }}>No upcoming races scheduled.</div>
+          )}
+          {pastRaces.length > 0 && (
+            <div>
+              <button onClick={() => setPastExpanded(e => !e)} style={{
+                background: "none", border: "none", color: COLORS.textMuted, cursor: "pointer",
+                fontSize: 12, padding: "4px 0", marginBottom: pastExpanded ? 10 : 0,
+              }}>
+                {pastExpanded ? "▲" : "▼"} {pastExpanded ? "Hide" : "Show"} {pastRaces.length} past {pastRaces.length === 1 ? "race" : "races"}
+              </button>
+              {pastExpanded && pastRaces.map(race => (
+                <button key={race.key} onClick={() => onNavigateToRace(race)} style={{
+                  background: COLORS.card, border: `1px solid ${COLORS.border}`,
+                  borderLeft: `4px solid ${COLORS.textMuted}`,
+                  borderRadius: 10, padding: "12px 16px", marginBottom: 8, cursor: "pointer",
+                  width: "100%", textAlign: "left", opacity: 0.5,
+                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>
+                      {race.type === "north" ? `North Region · ${race.name}` : `Club Race · ${race.series} R${race.round}`}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{formatDate(eventDate(race))}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, flexShrink: 0 }}>Passed</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

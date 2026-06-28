@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import COACHING_DATA from "./coaching.json";
 import ACCOMMODATION_DATA from "./accommodation.json";
+import CLUBS_DATA from "./clubs.json";
 import { supabase } from "./supabase";
 import {
   WEEKENDS, ALL_EVENTS, EVENT_TYPE_LABELS,
@@ -83,6 +84,16 @@ const SUBMISSION_STATUS_COLORS = {
   pending: COLORS.yellow,
   approved: COLORS.green,
   rejected: COLORS.textMuted,
+};
+
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAY_SHORT = { Monday: "MON", Tuesday: "TUE", Wednesday: "WED", Thursday: "THU", Friday: "FRI", Saturday: "SAT", Sunday: "SUN" };
+
+const clubLinkBtnStyle = {
+  display: "flex", alignItems: "center", gap: 6,
+  background: COLORS.card, border: `1px solid ${COLORS.border}`,
+  borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
+  textDecoration: "none", fontWeight: 500,
 };
 
 function FormField({ label, children }) {
@@ -793,7 +804,7 @@ function EventDetail({ weekend, checklist, onToggle, onBack, onViewCoaching, myR
   );
 }
 
-function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
+function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound, onViewClub }) {
   const isMine = myRounds && myRounds.has(event.key);
   const isTbc = event.status === "tbc";
 
@@ -854,6 +865,14 @@ function NorthRegionDetail({ event, onBack, myRounds, toggleMyRound }) {
               borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
               textDecoration: "none", fontWeight: 500,
             }}>📷 Instagram</a>
+          )}
+          {event.clubId && onViewClub && (
+            <button onClick={() => onViewClub(event.clubId)} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              borderRadius: 8, padding: "6px 12px", fontSize: 12, color: COLORS.textSecondary,
+              cursor: "pointer", fontWeight: 500,
+            }}>🏟 Club Profile</button>
           )}
           {toggleMyRound && (
             <button onClick={() => toggleMyRound(event.key)} style={{
@@ -961,8 +980,19 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
   const [submitting, setSubmitting] = useState(false);
 
   const [clubRace, setClubRace] = useState({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+  const [clubSelection, setClubSelection] = useState("");
   const [training, setTraining] = useState({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
   const [deadline, setDeadline] = useState({ eventKey: prefillEventKey || "", field: "parkingOpen", newDate: "", note: "" });
+
+  function handleClubSelect(value) {
+    setClubSelection(value);
+    if (value === "" || value === "other") {
+      setClubRace(r => ({ ...r, club: "", website: "", facebook: "", instagram: "" }));
+    } else {
+      const club = CLUBS_DATA.find(c => c.id === value);
+      if (club) setClubRace(r => ({ ...r, club: club.name, website: club.website || "", facebook: club.facebook || "", instagram: club.instagram || "" }));
+    }
+  }
 
   useEffect(() => {
     if (prefillEventKey) {
@@ -1005,6 +1035,7 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
       await addSubmission(type, targetKey, payload);
       setStatus({ kind: "success", message: "Thanks — submitted for review." });
       setClubRace({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+      setClubSelection("");
       setTraining({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
       setDeadline({ eventKey: "", field: "parkingOpen", newDate: "", note: "" });
       if (onClearPrefill) onClearPrefill();
@@ -1037,7 +1068,16 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
         <form onSubmit={handleSubmit}>
           {type === "club_race" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
-              <FormField label="Club name"><input style={inputStyle} value={clubRace.club} onChange={e => setClubRace({ ...clubRace, club: e.target.value })} /></FormField>
+              <FormField label="Club">
+                <select style={inputStyle} value={clubSelection} onChange={e => handleClubSelect(e.target.value)}>
+                  <option value="">Select a club…</option>
+                  {CLUBS_DATA.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="other">Other (not listed)</option>
+                </select>
+              </FormField>
+              {clubSelection === "other" && (
+                <FormField label="Club name"><input style={inputStyle} placeholder="Enter club name" value={clubRace.club} onChange={e => setClubRace({ ...clubRace, club: e.target.value })} /></FormField>
+              )}
               <FormField label="Series name"><input style={inputStyle} value={clubRace.series} onChange={e => setClubRace({ ...clubRace, series: e.target.value })} /></FormField>
               <FormField label="Round number"><input type="number" style={inputStyle} value={clubRace.round} onChange={e => setClubRace({ ...clubRace, round: e.target.value })} /></FormField>
               <FormField label="Date"><input type="date" style={inputStyle} value={clubRace.date} onChange={e => setClubRace({ ...clubRace, date: e.target.value })} /></FormField>
@@ -1134,6 +1174,185 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
                 {s.type === "deadline_update" ? ` — ${DEADLINE_FIELD_OPTIONS.find(f => f.key === s.payload.field)?.label || s.payload.field}` : ""}
               </div>
               <div style={{ fontSize: 11, color: COLORS.textMuted, flexShrink: 0 }}>{formatDate(s.created_at.slice(0, 10))}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClubDetail({ club, onBack, onNavigateToRace }) {
+  const northRaces = ALL_EVENTS.filter(e => e.type === "north" && e.clubId === club.id);
+  const clubRacesList = ALL_EVENTS.filter(e => e.type === "club" && e.clubId === club.id);
+  const allLinkedRaces = [...northRaces, ...clubRacesList].sort((a, b) => new Date(eventDate(a)) - new Date(eventDate(b)));
+
+  return (
+    <div>
+      <button onClick={onBack} style={{
+        background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary,
+        borderRadius: 8, padding: "8px 16px", cursor: "pointer", marginBottom: 20, fontSize: 13,
+      }}>← Clubs</button>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 32, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 1, color: COLORS.textPrimary }}>{club.name}</div>
+          {club.isOpenTrack && (
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, background: `${COLORS.green}22`, color: COLORS.green, border: `1px solid ${COLORS.green}55`, borderRadius: 10, padding: "3px 10px" }}>Open Track</div>
+          )}
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <a href={club.googleMapsUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: COLORS.blueText, textDecoration: "none" }}>
+            📍 {club.address}
+          </a>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {club.website && <a href={club.website} target="_blank" rel="noreferrer" style={clubLinkBtnStyle}>🌐 Website</a>}
+          {club.facebook && <a href={club.facebook} target="_blank" rel="noreferrer" style={clubLinkBtnStyle}>f Facebook</a>}
+          {club.instagram && <a href={club.instagram} target="_blank" rel="noreferrer" style={clubLinkBtnStyle}>📷 Instagram</a>}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Regular Sessions</div>
+        <div style={{ background: `${COLORS.yellow}11`, border: `1px solid ${COLORS.yellow}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: COLORS.yellow }}>
+          Sessions can change — always check the club website or socials for the latest information before heading out.
+        </div>
+        {club.sessions.map((s, i) => (
+          <div key={i} style={{
+            background: COLORS.card, border: `1px solid ${COLORS.border}`,
+            borderLeft: `4px solid ${s.type === "coaching" ? COLORS.blue : COLORS.green}`,
+            borderRadius: 10, padding: "12px 16px", marginBottom: 8,
+            display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+          }}>
+            <div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: s.note ? 4 : 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: COLORS.textMuted, width: 34 }}>{DAY_SHORT[s.day]}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{s.label}</div>
+              </div>
+              {s.note && <div style={{ fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", paddingLeft: 44 }}>{s.note}</div>}
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textSecondary, fontWeight: 600, flexShrink: 0 }}>{s.time}</div>
+          </div>
+        ))}
+      </div>
+
+      {allLinkedRaces.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Races at This Club</div>
+          {allLinkedRaces.map(race => {
+            const d = daysUntil(eventDate(race));
+            const isPast = d < 0;
+            return (
+              <button key={race.key} onClick={() => onNavigateToRace(race)} style={{
+                background: COLORS.card, border: `1px solid ${COLORS.border}`,
+                borderLeft: `4px solid ${isPast ? COLORS.textMuted : COLORS.red}`,
+                borderRadius: 10, padding: "12px 16px", marginBottom: 8, cursor: "pointer",
+                width: "100%", textAlign: "left", opacity: isPast ? 0.5 : 1,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>
+                    {race.type === "north" ? `North Region · ${race.name}` : `Club Race · ${race.series} R${race.round}`}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>{formatDate(eventDate(race))}</div>
+                </div>
+                {!isPast && <div style={{ fontSize: 12, fontWeight: 700, color: d <= 14 ? COLORS.redText : COLORS.textSecondary, flexShrink: 0 }}>{d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</div>}
+                {isPast && <div style={{ fontSize: 11, color: COLORS.textMuted, flexShrink: 0 }}>Passed</div>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClubsView({ onNavigateToRace, selectedClubId, setSelectedClubId }) {
+  const [tab, setTab] = useState("clubs");
+  const selectedClub = selectedClubId ? CLUBS_DATA.find(c => c.id === selectedClubId) : null;
+
+  if (selectedClub) {
+    return (
+      <ClubDetail
+        club={selectedClub}
+        onBack={() => setSelectedClubId(null)}
+        onNavigateToRace={onNavigateToRace}
+      />
+    );
+  }
+
+  const weekSessions = DAYS_OF_WEEK
+    .map(day => ({
+      day,
+      sessions: CLUBS_DATA.flatMap(club =>
+        club.sessions.filter(s => s.day === day).map(s => ({ ...s, club }))
+      ),
+    }))
+    .filter(d => d.sessions.length > 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>BMX Clubs</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[{ key: "clubs", label: "All Clubs" }, { key: "week", label: "Weekly Sessions" }].map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              background: tab === t.key ? `${COLORS.red}22` : COLORS.surface,
+              border: `1px solid ${tab === t.key ? COLORS.red : COLORS.border}`,
+              color: tab === t.key ? COLORS.redText : COLORS.textSecondary,
+              borderRadius: 20, padding: "5px 14px", cursor: "pointer", fontSize: 12, fontWeight: 500,
+            }}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "clubs" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {CLUBS_DATA.map(club => (
+            <button key={club.id} onClick={() => setSelectedClubId(club.id)} style={{
+              background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              borderRadius: 12, padding: 16, textAlign: "left", cursor: "pointer",
+              display: "flex", flexDirection: "column", gap: 6, width: "100%",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.textPrimary, fontFamily: "'Bebas Neue', Impact, sans-serif", letterSpacing: 0.5 }}>{club.name}</div>
+                {club.isOpenTrack && (
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, background: `${COLORS.green}22`, color: COLORS.green, border: `1px solid ${COLORS.green}55`, borderRadius: 10, padding: "2px 8px", flexShrink: 0 }}>Open Track</div>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{club.address.split(",").slice(-3).join(",").trim()}</div>
+              <div style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Sessions: {club.sessions.map(s => DAY_SHORT[s.day]).join(" · ")}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "week" && (
+        <div>
+          <div style={{ background: `${COLORS.yellow}11`, border: `1px solid ${COLORS.yellow}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: COLORS.yellow }}>
+            Sessions can change — always check the club website or socials before heading out.
+          </div>
+          {weekSessions.map(({ day, sessions }) => (
+            <div key={day} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: COLORS.textMuted, marginBottom: 8 }}>{day}</div>
+              {sessions.map((s, i) => (
+                <div key={i} onClick={() => setSelectedClubId(s.club.id)} style={{
+                  background: COLORS.card, border: `1px solid ${COLORS.border}`,
+                  borderLeft: `4px solid ${s.type === "coaching" ? COLORS.blue : COLORS.green}`,
+                  borderRadius: 10, padding: "12px 16px", marginBottom: 8, cursor: "pointer",
+                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, marginBottom: 2 }}>{s.club.name}</div>
+                    <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{s.label}</div>
+                    {s.note && <div style={{ fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", marginTop: 2 }}>{s.note}</div>}
+                  </div>
+                  <div style={{ fontSize: 12, color: COLORS.textSecondary, fontWeight: 600, flexShrink: 0 }}>{s.time}</div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -1341,6 +1560,7 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
 export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedWeekend, setSelectedWeekend] = useState(null);
+  const [selectedClubId, setSelectedClubId] = useState(null);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -1509,6 +1729,7 @@ export default function App() {
   const navItems = [
     { key: "dashboard", label: "Dashboard" },
     { key: "calendar", label: "Calendar" },
+    { key: "clubs", label: "Clubs" },
     { key: "coaching", label: "Coaching" },
     { key: "submit", label: "Submit" },
     ...(isAdmin ? [{ key: "review", label: `Review${pendingSubmissions.length ? ` (${pendingSubmissions.length})` : ""}` }] : []),
@@ -1560,7 +1781,7 @@ export default function App() {
         <div className="app-header-right" style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
           <div className="nav-scroll" style={{ display: "flex", gap: 4, overflowX: "auto", flexShrink: 1, minWidth: 0 }}>
             {navItems.map(n => (
-              <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); }} style={{
+              <button key={n.key} onClick={() => { setView(n.key); setSelectedWeekend(null); setSelectedClubId(null); }} style={{
                 background: view === n.key && !selectedWeekend ? `${COLORS.red}22` : "none",
                 border: `1px solid ${view === n.key && !selectedWeekend ? COLORS.red : "transparent"}`,
                 color: view === n.key && !selectedWeekend ? COLORS.redText : COLORS.textSecondary,
@@ -1609,6 +1830,7 @@ export default function App() {
               onBack={() => { setView("dashboard"); setSelectedWeekend(null); }}
               myRounds={myRounds}
               toggleMyRound={toggleMyRound}
+              onViewClub={clubId => { setSelectedClubId(clubId); setSelectedWeekend(null); setView("clubs"); }}
             />
           : view === "detail" && selectedWeekend && selectedWeekend.type === "club"
           ? <ClubRaceDetail
@@ -1633,6 +1855,8 @@ export default function App() {
             />
           : view === "calendar"
           ? <CalendarView onSelectWeekend={handleSelectWeekend} myRounds={myRounds} toggleMyRound={toggleMyRound} bookings={bookings} />
+          : view === "clubs"
+          ? <ClubsView onNavigateToRace={handleSelectWeekend} selectedClubId={selectedClubId} setSelectedClubId={setSelectedClubId} />
           : view === "coaching"
           ? <CoachingView />
           : view === "submit"

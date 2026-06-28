@@ -1,0 +1,27 @@
+[
+  {
+    "id": "merseyside-bmx",
+    "name": "Merseyside BMX Club",
+    "address": "Knowsley Leisure and Culture Park, Longview Drive, Huyton, Liverpool, L36 6EG",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Knowsley+Leisure+and+Culture+Park,+Longview+Drive,+Huyton,+Liverpool,+L36+6EG",
+    "isOpenTrack": true,
+    "website": "https://www.merseysidebmx.co.uk/",
+    "facebook": "https://www.facebook.com/share/1BL3WZYWyJ/",
+    "instagram": "https://www.instagram.com/merseysidebmxclub?igsh=MWo2d2ZvcGZtc2pvNA==",
+    "sessions": [
+      {
+        "day": "Tuesday",
+        "type": "open_gates",
+        "label": "Open Gates",
+        "time": "18:15–20:00"
+      },
+      {
+        "day": "Thursday",
+        "type": "coaching",
+        "label": "Coaching",
+        "time": "17:15–20:45",
+        "note": "Multiple levels from 17:15"
+      }
+    ]
+  }
+]

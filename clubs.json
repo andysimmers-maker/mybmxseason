@@ -8,7 +8,10 @@
     "website": "https://www.blackpoolbmxclub.com/",
     "facebook": "https://www.facebook.com/groups/blackpoolBMXclub/",
     "instagram": "https://www.instagram.com/blackpoolbmxclub/",
-    "sessions": []
+    "sessions": [
+      { "day": "Wednesday", "type": "open_gates", "label": "Open Gates", "time": "18:00–20:00" },
+      { "day": "Saturday", "type": "open_gates", "label": "Open Gates", "time": "10:00–12:00" }
+    ]
   },
   {
     "id": "bradford-bandits",
@@ -30,7 +33,9 @@
     "website": "https://bpbmxclub.org.uk/",
     "facebook": "https://www.facebook.com/bpbmxclub/",
     "instagram": "https://www.instagram.com/bpbmxclub/",
-    "sessions": []
+    "sessions": [
+      { "day": "Wednesday", "type": "open_gates", "label": "Open Gates", "time": "18:30–20:30" }
+    ]
   },
   {
     "id": "cheshire-ghost-riders",
@@ -41,7 +46,9 @@
     "website": "https://www.cgrbmxclub.co.uk/",
     "facebook": "https://www.facebook.com/CheshireGhostRidersBMXClub/",
     "instagram": "https://www.instagram.com/cgrbmxclub/",
-    "sessions": []
+    "sessions": [
+      { "day": "Thursday", "type": "open_gates", "label": "Open Gates", "time": "18:00–20:00" }
+    ]
   },
   {
     "id": "dragon-riders-bmx",
@@ -63,7 +70,10 @@
     "website": "https://www.manchesterbmx.co.uk/",
     "facebook": "https://www.facebook.com/manchesterbmxclub/",
     "instagram": "https://www.instagram.com/mbmxclub/",
-    "sessions": []
+    "sessions": [
+      { "day": "Thursday", "type": "open_gates", "label": "Open Gates", "time": "18:30–20:30" },
+      { "day": "Saturday", "type": "open_gates", "label": "Open Gates", "time": "14:00–17:00" }
+    ]
   },
   {
     "id": "merseyside-bmx",
@@ -99,7 +109,9 @@
     "website": "https://midlancsbmx.co.uk/",
     "facebook": "https://www.facebook.com/p/Mid-Lancs-BMX-Club-100057829772566/",
     "instagram": "https://www.instagram.com/midlancsbmx/",
-    "sessions": []
+    "sessions": [
+      { "day": "Wednesday", "type": "open_gates", "label": "Open Gates", "time": "18:00–20:00" }
+    ]
   },
   {
     "id": "north-east-bmx",
@@ -121,6 +133,8 @@
     "website": "https://www.prestonpiratesbmxclub.com/",
     "facebook": "https://www.facebook.com/pages/Preston-Pirates-Bmx-Club/111452588917886",
     "instagram": "https://www.instagram.com/prestonpiratesbmxclub/",
-    "sessions": []
+    "sessions": [
+      { "day": "Tuesday", "type": "open_gates", "label": "Open Gates", "time": "18:00–20:00" }
+    ]
   }
 ]

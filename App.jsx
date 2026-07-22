@@ -114,7 +114,7 @@ function CoachingView() {
   const seen = new Set();
   const weekendGroups = [];
   WEEKENDS.forEach(w => {
-    const sessions = filtered.filter(s => w.rounds.some(r => s.roundIds.includes(r.id)));
+    const sessions = filtered.filter(s => w.rounds.some(r => s.roundIds.includes(r.id)) && new Date(`${s.date}T${s.time}`) >= now);
     if (sessions.length === 0 || seen.has(w.weekendId)) return;
     seen.add(w.weekendId);
     weekendGroups.push({ weekend: w, sessions });
@@ -123,7 +123,7 @@ function CoachingView() {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>2026 Coaching Sessions</div>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1 }}>2026 National Coaching Sessions</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {allCoaches.map(c => (
             <button key={c} onClick={() => setFilterCoach(c)} style={{
@@ -154,14 +154,12 @@ function CoachingView() {
             <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{w.dates.map(formatDate).join(" · ")}</div>
           </div>
           {sessions.map(s => {
-            const past = new Date(`${s.date}T${s.time}`) < now;
             const days = daysUntil(s.date);
-            const platformColor = COLORS.blue;
             return (
               <div key={s.id} style={{
                 background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                borderLeft: `4px solid ${past ? COLORS.textMuted : COLORS.blue}`,
-                borderRadius: 10, padding: 16, marginBottom: 10, opacity: past ? 0.5 : 1,
+                borderLeft: `4px solid ${COLORS.blue}`,
+                borderRadius: 10, padding: 16, marginBottom: 10,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div style={{ flex: 1 }}>
@@ -176,7 +174,7 @@ function CoachingView() {
                     {s.notes && <div style={{ fontSize: 12, color: COLORS.textSecondary, fontStyle: "italic" }}>{s.notes}</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                    {!past && days >= 0 && (
+                    {days >= 0 && (
                       <div style={{ fontSize: 12, fontWeight: 700, color: days <= 7 ? COLORS.redText : COLORS.textSecondary }}>
                         {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
                       </div>
@@ -185,7 +183,7 @@ function CoachingView() {
                       <div style={{ fontSize: 11, color: COLORS.textSecondary }}>Code: <span style={{ fontWeight: 700, color: COLORS.textPrimary }}>{s.groupCode}</span></div>
                     )}
                     <a href={s.bookingUrl} target="_blank" rel="noreferrer" style={{
-                      background: platformColor, color: "#fff", borderRadius: 8,
+                      background: COLORS.blue, color: "#fff", borderRadius: 8,
                       padding: "7px 14px", fontSize: 12, fontWeight: 600, textDecoration: "none",
                     }}>Book · {s.bookingPlatform}</a>
                   </div>
@@ -1779,7 +1777,7 @@ export default function App() {
     { key: "dashboard", label: "Dashboard" },
     { key: "calendar", label: "Calendar" },
     { key: "clubs", label: "Clubs" },
-    { key: "coaching", label: "Coaching" },
+    { key: "coaching", label: "National Coaching" },
     { key: "submit", label: "Submit" },
     ...(isAdmin ? [{ key: "review", label: `Review${pendingSubmissions.length ? ` (${pendingSubmissions.length})` : ""}` }] : []),
   ];

@@ -17,7 +17,7 @@ export const WEEKENDS = (() => {
     isNatChamps: rounds.some(r => r.isNatChamps),
     // Race entry is the one time-critical entry deadline — it closes the
     // Monday before practice day, so it's derived rather than hand-maintained per round.
-    entryClose: rounds[0].practiceDate ? mondayBefore(rounds[0].practiceDate) : null,
+    entryClose: rounds[0].entryClose || (rounds[0].practiceDate ? mondayBefore(rounds[0].practiceDate) : null),
   }));
 })();
 

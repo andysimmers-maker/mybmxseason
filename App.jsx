@@ -979,7 +979,7 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [clubRace, setClubRace] = useState({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+  const [clubRace, setClubRace] = useState({ club: "", series: "", numRounds: 1, rounds: [{ date: "" }], website: "", facebook: "", instagram: "", notes: "" });
   const [clubSelection, setClubSelection] = useState("");
   const [training, setTraining] = useState({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
   const [deadline, setDeadline] = useState({ eventKey: prefillEventKey || "", field: "parkingOpen", newDate: "", note: "" });
@@ -1007,11 +1007,12 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
 
     let payload, targetKey = null;
     if (type === "club_race") {
-      if (!clubRace.club || !clubRace.date) {
-        setStatus({ kind: "error", message: "Club and date are required." });
+      if (!clubRace.club || clubRace.rounds.some(r => !r.date)) {
+        setStatus({ kind: "error", message: "Club and all round dates are required." });
         return;
       }
-      payload = { ...clubRace, round: clubRace.round ? Number(clubRace.round) : null };
+      const { numRounds, ...rest } = clubRace;
+      payload = rest;
     } else if (type === "training_session") {
       if (!training.weekendId || !training.venue || !training.date || !training.time) {
         setStatus({ kind: "error", message: "Weekend, venue, date and time are required." });
@@ -1034,7 +1035,7 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
     try {
       await addSubmission(type, targetKey, payload);
       setStatus({ kind: "success", message: "Thanks — submitted for review." });
-      setClubRace({ club: "", series: "", round: "", date: "", website: "", facebook: "", instagram: "", notes: "" });
+      setClubRace({ club: "", series: "", numRounds: 1, rounds: [{ date: "" }], website: "", facebook: "", instagram: "", notes: "" });
       setClubSelection("");
       setTraining({ weekendId: "", venue: "", date: "", time: "", coach: "", host: "", bookingPlatform: "Website", bookingUrl: "", notes: "", ageGroups: "" });
       setDeadline({ eventKey: "", field: "parkingOpen", newDate: "", note: "" });
@@ -1079,8 +1080,25 @@ function SubmitView({ addSubmission, mySubmissions, prefillEventKey, onClearPref
                 <FormField label="Club name"><input style={inputStyle} placeholder="Enter club name" value={clubRace.club} onChange={e => setClubRace({ ...clubRace, club: e.target.value })} /></FormField>
               )}
               <FormField label="Series name"><input style={inputStyle} value={clubRace.series} onChange={e => setClubRace({ ...clubRace, series: e.target.value })} /></FormField>
-              <FormField label="Round number"><input type="number" style={inputStyle} value={clubRace.round} onChange={e => setClubRace({ ...clubRace, round: e.target.value })} /></FormField>
-              <FormField label="Date"><input type="date" style={inputStyle} value={clubRace.date} onChange={e => setClubRace({ ...clubRace, date: e.target.value })} /></FormField>
+              <FormField label="Number of rounds">
+                <select style={inputStyle} value={clubRace.numRounds} onChange={e => {
+                  const n = Number(e.target.value);
+                  const rounds = Array.from({ length: n }, (_, i) => ({ date: clubRace.rounds[i]?.date || "" }));
+                  setClubRace({ ...clubRace, numRounds: n, rounds });
+                }}>
+                  {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </FormField>
+              <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
+                {clubRace.rounds.map((r, i) => (
+                  <FormField key={i} label={`Round ${i + 1} date`}>
+                    <input type="date" style={inputStyle} value={r.date} onChange={e => {
+                      const rounds = clubRace.rounds.map((rd, j) => j === i ? { date: e.target.value } : rd);
+                      setClubRace({ ...clubRace, rounds });
+                    }} />
+                  </FormField>
+                ))}
+              </div>
               <FormField label="Website"><input style={inputStyle} value={clubRace.website} onChange={e => setClubRace({ ...clubRace, website: e.target.value })} /></FormField>
               <FormField label="Facebook"><input style={inputStyle} value={clubRace.facebook} onChange={e => setClubRace({ ...clubRace, facebook: e.target.value })} /></FormField>
               <FormField label="Instagram"><input style={inputStyle} value={clubRace.instagram} onChange={e => setClubRace({ ...clubRace, instagram: e.target.value })} /></FormField>
@@ -1217,14 +1235,14 @@ function ClubDetail({ club, onBack, onNavigateToRace }) {
       </div>
 
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Regular Sessions</div>
+        <div style={{ fontSize: 12, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Open Gates</div>
         <div style={{ background: `${COLORS.yellow}11`, border: `1px solid ${COLORS.yellow}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: COLORS.yellow }}>
           Sessions can change — always check the club website or socials for the latest information before heading out.
         </div>
-        {club.sessions.map((s, i) => (
+        {club.sessions.filter(s => s.type === "open_gates").map((s, i) => (
           <div key={i} style={{
             background: COLORS.card, border: `1px solid ${COLORS.border}`,
-            borderLeft: `4px solid ${s.type === "coaching" ? COLORS.blue : COLORS.green}`,
+            borderLeft: `4px solid ${COLORS.green}`,
             borderRadius: 10, padding: "12px 16px", marginBottom: 8,
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
           }}>
@@ -1317,7 +1335,7 @@ function ClubsView({ onNavigateToRace, selectedClubId, setSelectedClubId }) {
     .map(day => ({
       day,
       sessions: CLUBS_DATA.flatMap(club =>
-        club.sessions.filter(s => s.day === day).map(s => ({ ...s, club }))
+        club.sessions.filter(s => s.type === "open_gates" && s.day === day).map(s => ({ ...s, club }))
       ),
     }))
     .filter(d => d.sessions.length > 0);
@@ -1354,7 +1372,7 @@ function ClubsView({ onNavigateToRace, selectedClubId, setSelectedClubId }) {
               </div>
               <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{club.address.split(",").slice(-3).join(",").trim()}</div>
               <div style={{ fontSize: 11, color: COLORS.textMuted }}>
-                Sessions: {club.sessions.map(s => DAY_SHORT[s.day]).join(" · ")}
+                Gates: {club.sessions.filter(s => s.type === "open_gates").map(s => DAY_SHORT[s.day]).join(" · ") || "—"}
               </div>
             </button>
           ))}
@@ -1372,7 +1390,7 @@ function ClubsView({ onNavigateToRace, selectedClubId, setSelectedClubId }) {
               {sessions.map((s, i) => (
                 <div key={i} onClick={() => setSelectedClubId(s.club.id)} style={{
                   background: COLORS.card, border: `1px solid ${COLORS.border}`,
-                  borderLeft: `4px solid ${s.type === "coaching" ? COLORS.blue : COLORS.green}`,
+                  borderLeft: `4px solid ${COLORS.green}`,
                   borderRadius: 10, padding: "12px 16px", marginBottom: 8, cursor: "pointer",
                   display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
                 }}>

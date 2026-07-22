@@ -34,6 +34,12 @@ export function formatDate(dateStr) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+export function monthLabel(dateStr) {
+  const [year, month] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, 1);
+  return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
 export function daysUntil(dateStr, now = new Date()) {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -85,10 +91,10 @@ const NATIONAL_DEADLINE_FIELDS = [
   { bookingKey: "gazebo", dateField: "gazeboBookingOpen", shortLabel: "Gazebo booking opens", condition: e => e.gazeboBookingOpen !== "TBC" },
 ];
 
-function nationalDeadlineItems(e, bookings) {
+function nationalDeadlineItems(e, bookings, keys) {
   const b = (bookings && bookings[e.weekendId]) || {};
   return NATIONAL_DEADLINE_FIELDS
-    .filter(f => !f.condition || f.condition(e))
+    .filter(f => (!keys || keys.includes(f.bookingKey)) && (!f.condition || f.condition(e)))
     .map(f => e[f.dateField] && { label: f.shortLabel, date: e[f.dateField], done: !!b[f.bookingKey] })
     .filter(Boolean);
 }
@@ -110,8 +116,10 @@ export function eventDeadlines(e, bookings) {
 
 export function eventCalendarItems(e, bookings) {
   if (e.type === "national") {
+    // Calendar list only surfaces the time-critical entry deadline — parking/camping/
+    // practice booking dates are still shown on the event detail page and Dashboard.
     const items = [
-      ...nationalDeadlineItems(e, bookings),
+      ...nationalDeadlineItems(e, bookings, ["entry"]),
       { label: "Practice", date: e.practiceDate },
       ...e.dates.map((date, i) => ({
         label: (e.dates.length > 1 ? `Day ${i + 1}` : "Race day") + (e.rounds[i]?.ageGroups ? ` — ${e.rounds[i].ageGroups}` : ""),

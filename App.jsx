@@ -5,7 +5,7 @@ import CLUBS_DATA from "./clubs.json";
 import { supabase } from "./supabase";
 import {
   WEEKENDS, ALL_EVENTS, EVENT_TYPE_LABELS,
-  formatDate, daysUntil, dayBefore,
+  formatDate, monthLabel, daysUntil, dayBefore,
   eventDate, eventEndDate, eventLabel, eventDeadlines, eventCalendarItems,
   eventHeroTitle, eventHeroSubtitle, eventHeroEyebrow, eventHeroTiles,
 } from "./events.js";
@@ -1583,7 +1583,23 @@ function CalendarView({ onSelectWeekend, myRounds, toggleMyRound, bookings }) {
         </div>
       </div>
 
-      {upcomingEvents.map(e => renderEventCard(e))}
+      {upcomingEvents.map((e, i) => {
+        const label = monthLabel(eventDate(e));
+        const showHeader = i === 0 || label !== monthLabel(eventDate(upcomingEvents[i - 1]));
+        return (
+          <div key={e.key}>
+            {showHeader && (
+              <div style={{
+                fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase",
+                letterSpacing: 1, margin: i === 0 ? "0 0 12px" : "28px 0 12px",
+              }}>
+                {label}
+              </div>
+            )}
+            {renderEventCard(e)}
+          </div>
+        );
+      })}
 
       {pastEvents.length > 0 && (
         <div style={{ marginTop: 8 }}>

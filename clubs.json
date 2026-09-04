@@ -114,6 +114,17 @@
     ]
   },
   {
+    "id": "racing-under-the-roof",
+    "name": "Racing Under The Roof",
+    "address": "National Cycling Centre, Stuart Street, Manchester M11 4DQ",
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=National+Cycling+Centre,+Stuart+Street,+Manchester+M11+4DQ",
+    "isOpenTrack": false,
+    "website": "",
+    "facebook": "https://www.facebook.com/racingundertheroof/",
+    "instagram": "",
+    "sessions": []
+  },
+  {
     "id": "north-east-bmx",
     "name": "North East BMX Club",
     "address": "Summerhill Country Park, Hartlepool TS25 4LL",

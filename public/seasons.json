@@ -1,6 +1,7 @@
 [
   {
     "id": 1, "round": 1, "weekend": "manchester-2026",
+    "address": "National Cycling Centre, Stuart Street, Manchester M11 4DQ",
     "venue": "National Cycling Centre (Indoor)", "city": "Manchester",
     "date": "2026-04-11", "practiceDate": "2026-04-10",
     "parkingOpen": "2026-03-01", "campingAvailable": false,
@@ -14,6 +15,7 @@
   },
   {
     "id": 2, "round": 2, "weekend": "manchester-2026",
+    "address": "National Cycling Centre, Stuart Street, Manchester M11 4DQ",
     "venue": "National Cycling Centre (Indoor)", "city": "Manchester",
     "date": "2026-04-12", "practiceDate": "2026-04-10",
     "parkingOpen": "2026-03-01", "campingAvailable": false,
@@ -27,6 +29,7 @@
   },
   {
     "id": 3, "round": 3, "weekend": "glasgow-2026",
+    "address": "Glasgow BMX Centre, 137 Archerhill Road, Glasgow G13 3LS",
     "venue": "Glasgow BMX Centre (Movement Park)", "city": "Glasgow",
     "date": "2026-05-02", "practiceDate": "2026-05-01",
     "parkingOpen": "2026-03-15", "campingAvailable": false,
@@ -40,6 +43,7 @@
   },
   {
     "id": 4, "round": 4, "weekend": "glasgow-2026",
+    "address": "Glasgow BMX Centre, 137 Archerhill Road, Glasgow G13 3LS",
     "venue": "Glasgow BMX Centre (Movement Park)", "city": "Glasgow",
     "date": "2026-05-03", "practiceDate": "2026-05-01",
     "parkingOpen": "2026-03-15", "campingAvailable": false,
@@ -53,6 +57,7 @@
   },
   {
     "id": 5, "round": 5, "weekend": "gosport-2026",
+    "address": "Alver Valley, Grange Road, Gosport PO13 8AS",
     "venue": "Gosport BMX Club", "city": "Gosport",
     "date": "2026-06-13", "practiceDate": "2026-06-12",
     "parkingOpen": "2026-04-15", "campingAvailable": true,
@@ -68,6 +73,7 @@
   },
   {
     "id": 6, "round": 6, "weekend": "gosport-2026",
+    "address": "Alver Valley, Grange Road, Gosport PO13 8AS",
     "venue": "Gosport BMX Club", "city": "Gosport",
     "date": "2026-06-14", "practiceDate": "2026-06-12",
     "parkingOpen": "2026-04-15", "campingAvailable": true,
@@ -83,6 +89,7 @@
   },
   {
     "id": 7, "round": 7, "weekend": "cardiff-2026",
+    "address": "Riverside Park, Hartland Road, Llanrumney, Cardiff CF3 4JL",
     "venue": "Cardiff BMX Racing Club (National BMX Centre Wales)", "city": "Cardiff",
     "date": "2026-07-04", "practiceDate": "2026-07-03",
     "parkingOpen": "2026-05-23", "campingAvailable": true,
@@ -99,6 +106,7 @@
   },
   {
     "id": 8, "round": 8, "weekend": "cardiff-2026",
+    "address": "Riverside Park, Hartland Road, Llanrumney, Cardiff CF3 4JL",
     "venue": "Cardiff BMX Racing Club (National BMX Centre Wales)", "city": "Cardiff",
     "date": "2026-07-05", "practiceDate": "2026-07-03",
     "parkingOpen": "2026-05-23", "campingAvailable": true,
@@ -115,6 +123,7 @@
   },
   {
     "id": 9, "round": 9, "weekend": "derby-2026",
+    "address": "Derby Arena, Moor Lane, Derby DE24 8HZ",
     "venue": "Derby Arena", "city": "Derby",
     "date": "2026-08-01", "practiceDate": "2026-07-31",
     "parkingOpen": "2026-06-20", "campingAvailable": true,
@@ -130,6 +139,7 @@
   },
   {
     "id": 10, "round": 10, "weekend": "derby-2026",
+    "address": "Derby Arena, Moor Lane, Derby DE24 8HZ",
     "venue": "Derby Arena", "city": "Derby",
     "date": "2026-08-02", "practiceDate": "2026-07-31",
     "parkingOpen": "2026-06-20", "campingAvailable": true,
@@ -145,6 +155,7 @@
   },
   {
     "id": 11, "round": 11, "weekend": "britishchamps-2026",
+    "address": "Platt Fields Park, Mabfield Road, Fallowfield, Manchester M14 6LN",
     "venue": "Manchester BMX Club (Platt Fields)", "city": "Manchester",
     "date": "2026-08-29", "practiceDate": "2026-08-28", "ageGroups": "Cruiser & 12 & Under",
     "entryClose": "2026-08-17",
@@ -161,6 +172,7 @@
   },
   {
     "id": 12, "round": 12, "weekend": "britishchamps-2026",
+    "address": "Platt Fields Park, Mabfield Road, Fallowfield, Manchester M14 6LN",
     "venue": "Manchester BMX Club (Platt Fields)", "city": "Manchester",
     "date": "2026-08-30", "practiceDate": "2026-08-28", "ageGroups": "13 & Over",
     "entryClose": "2026-08-17",

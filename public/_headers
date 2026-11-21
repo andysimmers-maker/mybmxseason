@@ -1,5 +1,10 @@
-# Lets other sites (merseysidebmx.co.uk regional race calendar) read the
-# North Region data. Edit public/northRegion.json and both sites update.
+# Lets other sites read the race data. Edit the JSON here and every site updates:
+#   northRegion.json -> merseysidebmx.co.uk regional calendar (loads it live)
+#   seasons.json     -> Merseyside NRT site national calendar (loads it at build time)
 /northRegion.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
+
+/seasons.json
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=300

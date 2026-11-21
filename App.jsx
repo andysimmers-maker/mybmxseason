@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import COACHING_DATA from "./coaching.json";
-import ACCOMMODATION_DATA from "./accommodation.json";
+import COACHING_DATA from "./public/coaching.json";
+import ACCOMMODATION_DATA from "./public/accommodation.json";
 import CLUBS_DATA from "./clubs.json";
 import { supabase } from "./supabase";
 import {

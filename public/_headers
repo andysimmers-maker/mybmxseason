@@ -1,10 +1,20 @@
 # Lets other sites read the race data. Edit the JSON here and every site updates:
-#   northRegion.json -> merseysidebmx.co.uk regional calendar (loads it live)
-#   seasons.json     -> Merseyside NRT site national calendar (loads it at build time)
+#   northRegion.json   -> merseysidebmx.co.uk regional calendar (loads it live)
+#   seasons.json       -> Merseyside NRT site national calendar (loads it at build time)
+#   coaching.json      -> NRT race weekend pages (build time)
+#   accommodation.json -> NRT race weekend pages (build time)
 /northRegion.json
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=300
 
 /seasons.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
+
+/coaching.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
+
+/accommodation.json
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=300

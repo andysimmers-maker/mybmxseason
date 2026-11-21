@@ -1,5 +1,5 @@
 import SEASON_DATA from "./seasons.json";
-import NORTH_REGION_DATA from "./northRegion.json";
+import NORTH_REGION_DATA from "./public/northRegion.json";
 import CLUB_RACES_DATA from "./clubRaces.json";
 
 export const WEEKENDS = (() => {

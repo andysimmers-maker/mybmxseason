@@ -1,0 +1,5 @@
+# Lets other sites (merseysidebmx.co.uk regional race calendar) read the
+# North Region data. Edit public/northRegion.json and both sites update.
+/northRegion.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
